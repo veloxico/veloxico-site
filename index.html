@@ -330,26 +330,33 @@
     .donate-list {
       list-style: none;
       font-size: clamp(0.55rem, 1.5vw, 0.7rem);
+      container-type: inline-size;
+      width: 100%;
     }
     .donate-list li {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
       margin-bottom: 1.2rem;
+      width: 100%;
     }
     .donate-label {
       color: var(--cyan);
     }
     .donate-addr {
       color: #aaaacc;
-      word-break: break-all;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       cursor: pointer;
       transition: all 0.2s ease;
-      font-size: clamp(0.5rem, 1.2vw, 0.65rem);
+      font-size: clamp(0.35rem, 1.7cqi, 0.65rem);
       line-height: 1.4;
       padding: 0.6rem 0.8rem;
       background: rgba(0, 255, 136, 0.03);
       border: 1px solid rgba(0, 255, 136, 0.1);
+      width: 100%;
+      box-sizing: border-box;
     }
     .donate-addr:hover { 
       color: #ffffff; 
