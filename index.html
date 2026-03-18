@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>veloxico — projects</title>
   <meta name="description" content="veloxico — open source projects & portfolio">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%2306060f'/><text x='4' y='24' font-family='monospace' font-size='24' font-weight='bold' fill='%2300ff88'>V</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect width='16' height='16' fill='%2306060f'/><rect x='6' y='1' width='4' height='2' fill='%2300ff88'/><rect x='4' y='3' width='8' height='2' fill='%2300ff88'/><rect x='3' y='5' width='10' height='2' fill='%234ecdc4'/><rect x='4' y='7' width='8' height='2' fill='%234ecdc4'/><rect x='5' y='9' width='6' height='2' fill='%23a855f7'/><rect x='6' y='11' width='4' height='2' fill='%23a855f7'/><rect x='7' y='13' width='2' height='2' fill='%23ff6b35'/><rect x='6' y='2' width='2' height='2' fill='%23ffffff' opacity='0.4'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -104,9 +104,8 @@
       letter-spacing: 0.25em;
       opacity: 0;
       animation: fade-up 1s ease-out 1.2s forwards;
-      transition: color 2s, text-shadow 2s;
     }
-    .hero.daytime .hero-sub {
+    .hero-sub.daytime {
       color: rgba(255,255,255,0.7);
       text-shadow: 0 1px 3px rgba(0,0,0,0.4);
     }
@@ -258,15 +257,16 @@
     }
 
     .project-name {
-      font-size: 0.65rem;
+      font-size: clamp(0.7rem, 2vw, 0.9rem);
       color: var(--green);
       margin-bottom: 0.7rem;
       position: relative;
       z-index: 2;
+      line-height: 1.4;
     }
     .project-desc {
-      font-size: 0.45rem;
-      line-height: 2;
+      font-size: clamp(0.55rem, 1.5vw, 0.7rem);
+      line-height: 1.8;
       color: #aaaacc;
       margin-bottom: 1rem;
       min-height: 2rem;
@@ -275,8 +275,9 @@
     }
     .project-meta {
       display: flex;
+      flex-wrap: wrap;
       gap: 1rem;
-      font-size: 0.4rem;
+      font-size: clamp(0.5rem, 1.2vw, 0.6rem);
       color: #aaaacc;
       position: relative;
       z-index: 2;
@@ -295,7 +296,7 @@
     .projects-loading {
       text-align: center;
       color: var(--dim);
-      font-size: 0.55rem;
+      font-size: clamp(0.6rem, 1.5vw, 0.8rem);
       padding: 3rem;
       animation: pulse 1.5s ease-in-out infinite;
     }
@@ -321,41 +322,42 @@
     }
 
     .footer-title {
-      font-size: 0.65rem;
+      font-size: clamp(0.75rem, 2vw, 1rem);
       color: var(--orange);
       margin-bottom: 1.5rem;
     }
 
     .donate-list {
       list-style: none;
-      font-size: 0.5rem;
-      line-height: 3;
+      font-size: clamp(0.55rem, 1.5vw, 0.7rem);
+      line-height: 2.5;
     }
     .donate-list li {
       display: flex;
       align-items: baseline;
       gap: 0.8rem;
       flex-wrap: wrap;
-      margin-bottom: 0.3rem;
+      margin-bottom: 0.8rem;
     }
     .donate-label {
       color: var(--cyan);
-      min-width: 90px;
+      min-width: 120px;
     }
     .donate-addr {
       color: #aaaacc;
       word-break: break-all;
       cursor: pointer;
       transition: color 0.2s;
-      font-size: 0.4rem;
+      font-size: clamp(0.5rem, 1.2vw, 0.65rem);
+      line-height: 1.4;
     }
     .donate-addr:hover { color: #ffffff; }
     .donate-addr.copied { color: var(--green); }
 
     .links-list {
       list-style: none;
-      font-size: 0.55rem;
-      line-height: 3.5;
+      font-size: clamp(0.55rem, 1.5vw, 0.75rem);
+      line-height: 2.5;
     }
     .links-list a {
       color: var(--green);
@@ -367,7 +369,7 @@
 
     .footer-copy {
       text-align: center;
-      font-size: 0.38rem;
+      font-size: clamp(0.5rem, 1.2vw, 0.6rem);
       color: #8888aa;
       margin-top: 2.5rem;
       padding-top: 1.5rem;
@@ -851,8 +853,11 @@ loadRepos();
   let wasDaytime = null;
   let isAnimating = false;
 
-  function typeWrite(cb) {
+  function typeWrite(isDay, cb) {
     isAnimating = true;
+    if (isDay) el.classList.add('daytime');
+    else el.classList.remove('daytime');
+
     let i = 0;
     el.innerHTML = '<span class="cursor-blink"></span>';
     const interval = setInterval(() => {
@@ -869,7 +874,7 @@ loadRepos();
     }, 50);
   }
 
-  function eraseAndRetype() {
+  function eraseAndRetype(isDay) {
     if (isAnimating) return;
     isAnimating = true;
     let i = TEXT.length;
@@ -878,7 +883,7 @@ loadRepos();
       if (i <= 0) {
         clearInterval(eraseInterval);
         el.innerHTML = '<span class="cursor-blink"></span>';
-        setTimeout(() => typeWrite(null), 400);
+        setTimeout(() => typeWrite(isDay, null), 400);
       } else {
         el.innerHTML = TEXT.slice(0, i) + '<span class="cursor-blink"></span>';
       }
@@ -886,7 +891,10 @@ loadRepos();
   }
 
   // initial type after fade-in
-  setTimeout(() => typeWrite(null), 1500);
+  setTimeout(() => {
+    const isDay = document.getElementById('hero').classList.contains('daytime');
+    typeWrite(isDay, null);
+  }, 1500);
 
   // watch for day/night transitions
   setInterval(() => {
@@ -894,7 +902,7 @@ loadRepos();
     const hero = document.getElementById('hero');
     const isDaytime = hero.classList.contains('daytime');
     if (wasDaytime !== null && isDaytime !== wasDaytime) {
-      eraseAndRetype();
+      eraseAndRetype(isDaytime);
     }
     wasDaytime = isDaytime;
   }, 500);
@@ -904,11 +912,11 @@ loadRepos();
 (function() {
   const phrases = [
     'DevOps by day, vibe-coder by night',
-    'I don\'t fix bugs, I add features',
-    'git push --force and pray',
-    'It works on my machine (tm)',
+    'Automating the boring stuff since day one',
+    'Writing code my future self will understand',
+    'Exit code 0 is my love language',
     'sudo rm -rf /sleep',
-    'Infrastructure as code, bugs as features',
+    'Turning caffeine into clean architecture',
     'Powered by mass amounts of coffee',
     'YAML engineer & pipeline whisperer',
     'Turning coffee into infrastructure',
