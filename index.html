@@ -320,6 +320,9 @@
       grid-template-columns: 1fr 1fr;
       gap: 2.5rem;
     }
+    .footer-grid > div {
+      min-width: 0;
+    }
 
     .footer-title {
       font-size: clamp(0.75rem, 2vw, 1rem);
@@ -332,6 +335,7 @@
       font-size: clamp(0.55rem, 1.5vw, 0.7rem);
       container-type: inline-size;
       width: 100%;
+      min-width: 0;
     }
     .donate-list li {
       display: flex;
@@ -339,11 +343,13 @@
       gap: 0.5rem;
       margin-bottom: 1.2rem;
       width: 100%;
+      min-width: 0;
     }
     .donate-label {
       color: var(--cyan);
     }
     .donate-addr {
+      display: block;
       color: #aaaacc;
       white-space: nowrap;
       overflow: hidden;
@@ -356,7 +362,9 @@
       background: rgba(0, 255, 136, 0.03);
       border: 1px solid rgba(0, 255, 136, 0.1);
       width: 100%;
+      max-width: 100%;
       box-sizing: border-box;
+      min-width: 0;
     }
     .donate-addr:hover { 
       color: #ffffff; 
