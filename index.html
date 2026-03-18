@@ -3,27 +3,978 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>veloxico</title>
+  <title>veloxico — projects</title>
+  <meta name="description" content="veloxico — open source projects & portfolio">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #06060f;
+      --green: #00ff88;
+      --orange: #ff6b35;
+      --cyan: #4ecdc4;
+      --purple: #a855f7;
+      --text: #e0e0e0;
+      --dim: #444466;
+      --card: #0c0c1e;
+      --pixel: 4px;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: #0a0a0a;
-      color: #e0e0e0;
-      min-height: 100vh;
+      font-family: 'Press Start 2P', monospace;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      image-rendering: pixelated;
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      min-height: 550px;
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
+      cursor: crosshair;
     }
-    .container { text-align: center; padding: 2rem; }
-    h1 { font-size: 3rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
-    p { color: #888; font-size: 1.1rem; }
+
+    canvas#scene {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+    }
+
+    /* CRT scanline overlay */
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0,0,0,0.06) 0px,
+        rgba(0,0,0,0.06) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .hero-title {
+      font-size: clamp(2.2rem, 7vw, 5.5rem);
+      color: var(--green);
+      text-shadow:
+        0 0 40px rgba(0,255,136,0.5),
+        0 0 80px rgba(0,255,136,0.2),
+        0 4px 0 #004d29;
+      letter-spacing: 0.06em;
+      opacity: 0;
+      animation: fade-up 1.2s ease-out 0.5s forwards;
+      transition: text-shadow 2s;
+    }
+    .hero.daytime .hero-title {
+      color: #00dd77;
+      text-shadow:
+        0 0 30px rgba(0,180,100,0.4),
+        0 4px 0 #005522,
+        0 2px 10px rgba(0,0,0,0.4);
+    }
+
+    .hero-sub {
+      font-size: clamp(0.4rem, 1.2vw, 0.65rem);
+      color: var(--dim);
+      margin-top: 1.2rem;
+      letter-spacing: 0.25em;
+      opacity: 0;
+      animation: fade-up 1s ease-out 1.2s forwards;
+      transition: color 2s, text-shadow 2s;
+    }
+    .hero.daytime .hero-sub {
+      color: rgba(255,255,255,0.7);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+    .cursor-blink {
+      display: inline-block;
+      width: 0.5em;
+      height: 1em;
+      background: currentColor;
+      vertical-align: middle;
+      margin-left: 2px;
+      animation: cursor-blink 0.6s steps(2) infinite;
+    }
+    @keyframes cursor-blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .hero-bio {
+      font-size: clamp(0.35rem, 0.9vw, 0.5rem);
+      color: var(--orange);
+      margin-top: 1rem;
+      letter-spacing: 0.1em;
+      opacity: 0;
+      animation: fade-up 1s ease-out 1.5s forwards;
+      min-height: 1.5em;
+      white-space: nowrap;
+      transition: color 2s;
+    }
+    .hero.daytime .hero-bio,
+    .hero.daytime .hero-bio .char-done { color: #ffcc66; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+    .hero.daytime .hero-bio .char-glitch { color: #aaddff; }
+    .hero-bio .char-glitch {
+      display: inline-block;
+      color: var(--cyan);
+      animation: char-flicker 0.08s steps(1) infinite;
+    }
+    @keyframes char-flicker {
+      0% { opacity: 1; }
+      50% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+    .hero-bio .char-done {
+      display: inline-block;
+      color: var(--orange);
+      animation: none;
+    }
+
+    .hero-cta {
+      display: inline-block;
+      margin-top: 2.5rem;
+      font-family: inherit;
+      font-size: clamp(0.35rem, 0.9vw, 0.5rem);
+      color: var(--cyan);
+      text-decoration: none;
+      border: 2px solid var(--cyan);
+      padding: 0.8em 1.6em;
+      pointer-events: all;
+      opacity: 0;
+      animation: fade-up 1s ease-out 1.8s forwards;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    }
+    .hero-cta:hover {
+      background: var(--cyan);
+      color: var(--bg);
+      box-shadow: 0 0 20px rgba(78,205,196,0.4);
+    }
+    .hero.daytime .hero-cta {
+      color: rgba(255,255,255,0.85);
+      border-color: rgba(255,255,255,0.5);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .hero.daytime .hero-cta:hover {
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      border-color: rgba(255,255,255,0.8);
+      box-shadow: 0 0 15px rgba(255,255,255,0.2);
+    }
+
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== SECTION ===== */
+    section {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem 1.5rem;
+    }
+
+    .section-title {
+      font-size: clamp(0.7rem, 1.8vw, 1rem);
+      color: var(--cyan);
+      margin-bottom: 2.5rem;
+      text-align: center;
+      text-shadow: 0 0 20px rgba(78,205,196,0.3);
+    }
+    .section-title span { color: var(--dim); }
+
+    /* ===== PROJECT CARDS ===== */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .project-card {
+      background: var(--card);
+      border: 2px solid #1a1a35;
+      padding: 1.4rem;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    .project-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out, border-color 0.2s, box-shadow 0.2s;
+    }
+    /* scan-line reveal on hover */
+    .project-card::before {
+      content: '';
+      position: absolute;
+      top: -100%; left: 0;
+      width: 100%; height: 100%;
+      background: linear-gradient(180deg,
+        transparent 0%,
+        rgba(0,255,136,0.03) 45%,
+        rgba(0,255,136,0.08) 50%,
+        rgba(0,255,136,0.03) 55%,
+        transparent 100%
+      );
+      transition: top 0.5s ease;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .project-card:hover::before { top: 100%; }
+    .project-card:hover {
+      border-color: var(--green);
+      transform: translateY(-2px);
+      box-shadow: 0 0 25px rgba(0,255,136,0.1), 0 8px 30px rgba(0,0,0,0.3);
+    }
+
+    .project-name {
+      font-size: 0.65rem;
+      color: var(--green);
+      margin-bottom: 0.7rem;
+      position: relative;
+      z-index: 2;
+    }
+    .project-desc {
+      font-size: 0.45rem;
+      line-height: 2;
+      color: var(--dim);
+      margin-bottom: 1rem;
+      min-height: 2rem;
+      position: relative;
+      z-index: 2;
+    }
+    .project-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.4rem;
+      color: var(--dim);
+      position: relative;
+      z-index: 2;
+    }
+    .project-lang {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .lang-dot {
+      width: 8px; height: 8px;
+      display: inline-block;
+    }
+    .project-stars { color: var(--orange); }
+
+    .projects-loading {
+      text-align: center;
+      color: var(--dim);
+      font-size: 0.55rem;
+      padding: 3rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 2px solid #1a1a35;
+      padding: 3rem 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2.5rem;
+    }
+
+    .footer-title {
+      font-size: 0.55rem;
+      color: var(--orange);
+      margin-bottom: 1.2rem;
+    }
+
+    .donate-list {
+      list-style: none;
+      font-size: 0.38rem;
+      line-height: 2.8;
+    }
+    .donate-list li {
+      display: flex;
+      align-items: baseline;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+    .donate-label {
+      color: var(--cyan);
+      min-width: 75px;
+    }
+    .donate-addr {
+      color: var(--dim);
+      word-break: break-all;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .donate-addr:hover { color: var(--text); }
+    .donate-addr.copied { color: var(--green); }
+
+    .links-list {
+      list-style: none;
+      font-size: 0.45rem;
+      line-height: 3;
+    }
+    .links-list a {
+      color: var(--green);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .links-list a:hover { color: var(--cyan); }
+    .links-list a::before { content: '> '; color: var(--dim); }
+
+    .footer-copy {
+      text-align: center;
+      font-size: 0.38rem;
+      color: #222240;
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #121230;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #1a1a35; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+    @media (max-width: 600px) {
+      .footer-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>veloxico</h1>
-    <p>coming soon</p>
+
+<!-- HERO -->
+<div class="hero" id="hero">
+  <canvas id="scene"></canvas>
+  <div class="hero-content">
+    <h1 class="hero-title">VELOXICO</h1>
+    <p class="hero-sub" id="hero-sub"></p>
+    <p class="hero-bio" id="hero-bio"></p>
+    <a href="#projects" class="hero-cta">EXPLORE</a>
   </div>
+</div>
+
+<!-- PROJECTS -->
+<section id="projects">
+  <h2 class="section-title"><span>// </span>PROJECTS</h2>
+  <div class="projects-grid" id="projects-grid">
+    <div class="projects-loading">LOADING...</div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <h3 class="footer-title">DONATE</h3>
+      <ul class="donate-list">
+        <li><span class="donate-label">BTC</span><span class="donate-addr" onclick="copyAddr(this)">bc1qt5zu44m43f2ca07tedwgund0dxhtpcqkl92afz</span></li>
+        <li><span class="donate-label">ETH</span><span class="donate-addr" onclick="copyAddr(this)">0xaAbcc0B714742525BB97d0594bc4d1DD90Ef5601</span></li>
+        <li><span class="donate-label">USDT TRC20</span><span class="donate-addr" onclick="copyAddr(this)">TAhDQw64uCDdCXKLUmfyjAe1comFPVDj99</span></li>
+        <li><span class="donate-label">USDT ERC20</span><span class="donate-addr" onclick="copyAddr(this)">0xaAbcc0B714742525BB97d0594bc4d1DD90Ef5601</span></li>
+        <li><span class="donate-label">TON</span><span class="donate-addr" onclick="copyAddr(this)">UQA5Z9Lasm_Ke61wYLSuXy7wQnrX7Pefd4RNbDyzBWY9VFjj</span></li>
+      </ul>
+    </div>
+    <div>
+      <h3 class="footer-title">LINKS</h3>
+      <ul class="links-list">
+        <li><a href="https://github.com/veloxico" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://www.linkedin.com/in/okosenko/" target="_blank" rel="noopener">LinkedIn</a></li>
+        <li><a href="https://github.com/sponsors/veloxico" target="_blank" rel="noopener">Sponsor on GitHub</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="footer-copy">&copy; 2026 veloxico</p>
+</footer>
+
+<script>
+/* ===== INTERACTIVE PIXEL SPACE SCENE ===== */
+(function() {
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  let mouseX = 0.5, mouseY = 0.5;
+  let prevMouseX = 0.5, prevMouseY = 0.5;
+  let time = 0;
+  const CYCLE_DURATION = 60; // full day/night cycle in seconds
+
+  // Day/night sky color stops: [top, mid, bottom]
+  // Harmonized palette — all phases complement the green (#00ff88) title
+  const skyPhases = [
+    { at: 0.00, top: [6,6,18],     mid: [10,10,30],    bot: [14,14,38]   },  // deep night
+    { at: 0.15, top: [12,10,32],   mid: [18,14,42],    bot: [28,18,52]   },  // late night
+    { at: 0.22, top: [32,18,52],   mid: [55,30,65],    bot: [80,45,70]   },  // pre-dawn (purple)
+    { at: 0.28, top: [60,40,75],   mid: [110,65,80],   bot: [160,95,85]  },  // dawn (rose-purple)
+    { at: 0.33, top: [70,55,90],   mid: [130,100,110], bot: [180,140,120]},  // sunrise (warm lavender)
+    { at: 0.40, top: [45,90,160],  mid: [75,130,190],  bot: [110,165,210]},  // morning
+    { at: 0.50, top: [35,80,150],  mid: [60,115,185],  bot: [95,150,205] },  // midday
+    { at: 0.60, top: [45,85,155],  mid: [70,120,185],  bot: [100,155,208]},  // afternoon
+    { at: 0.68, top: [70,60,110],  mid: [130,85,95],   bot: [175,115,85] },  // golden hour
+    { at: 0.75, top: [50,30,75],   mid: [90,45,70],    bot: [140,65,60]  },  // sunset (muted coral-purple)
+    { at: 0.82, top: [30,18,55],   mid: [45,25,60],    bot: [60,30,65]   },  // dusk
+    { at: 0.90, top: [14,12,35],   mid: [18,15,42],    bot: [22,18,48]   },  // twilight
+    { at: 1.00, top: [6,6,18],     mid: [10,10,30],    bot: [14,14,38]   },  // deep night again
+  ];
+
+  function lerpColor(a, b, t) {
+    return [
+      Math.round(a[0] + (b[0] - a[0]) * t),
+      Math.round(a[1] + (b[1] - a[1]) * t),
+      Math.round(a[2] + (b[2] - a[2]) * t)
+    ];
+  }
+
+  function getSkyColors(phase) {
+    // phase 0..1
+    let i = 0;
+    while (i < skyPhases.length - 1 && skyPhases[i + 1].at <= phase) i++;
+    const a = skyPhases[i];
+    const b = skyPhases[Math.min(i + 1, skyPhases.length - 1)];
+    const range = b.at - a.at || 1;
+    const t = (phase - a.at) / range;
+    return {
+      top: lerpColor(a.top, b.top, t),
+      mid: lerpColor(a.mid, b.mid, t),
+      bot: lerpColor(a.bot, b.bot, t)
+    };
+  }
+
+  function isDaytime(phase) {
+    return phase > 0.35 && phase < 0.65;
+  }
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio, 2);
+    W = canvas.clientWidth;
+    H = canvas.clientHeight;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const heroEl = document.getElementById('hero');
+  heroEl.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = (e.clientX - rect.left) / rect.width;
+    mouseY = (e.clientY - rect.top) / rect.height;
+  });
+
+  // === STARS (3 layers) ===
+  const layers = [
+    { count: 100, size: 2, parallax: 0.02, color: '#333355' },
+    { count: 60,  size: 2, parallax: 0.04, color: '#555577' },
+    { count: 30,  size: 3, parallax: 0.07, color: '#8888aa' },
+  ];
+  for (const l of layers) {
+    l.stars = [];
+    for (let i = 0; i < l.count; i++) {
+      l.stars.push({
+        x: Math.random() * W, y: Math.random() * H,
+        phase: Math.random() * Math.PI * 2,
+        twinkleSpeed: 0.01 + Math.random() * 0.03
+      });
+    }
+  }
+
+  // === SHOOTING STARS ===
+  const shooters = [];
+  function spawnShooter() {
+    shooters.push({
+      x: Math.random() * W * 0.7,
+      y: Math.random() * H * 0.35,
+      vx: 4 + Math.random() * 5,
+      vy: 2 + Math.random() * 2.5,
+      life: 1,
+      length: 25 + Math.random() * 35,
+      color: ['#00ff88','#4ecdc4','#a855f7','#ff6b35'][Math.floor(Math.random()*4)]
+    });
+  }
+
+  // === FLOATING CRYSTALS ===
+  const crystals = [];
+  const cColors = ['#00ff88','#4ecdc4','#a855f7','#ff6b35','#ffdd33'];
+  for (let i = 0; i < 8; i++) {
+    crystals.push({
+      x: Math.random() * W, y: H * 0.15 + Math.random() * H * 0.6,
+      size: 6 + Math.floor(Math.random() * 4) * 2,
+      color: cColors[Math.floor(Math.random() * cColors.length)],
+      phase: Math.random() * Math.PI * 2,
+      floatSpeed: 0.008 + Math.random() * 0.012,
+      floatAmp: 8 + Math.random() * 12,
+      parallax: 0.03 + Math.random() * 0.05,
+      alpha: 0.15 + Math.random() * 0.25
+    });
+  }
+
+  // === MOUSE TRAIL PARTICLES ===
+  const trail = [];
+
+  // === CLICK EXPLOSIONS ===
+  const explosions = [];
+  heroEl.addEventListener('click', e => {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const color = cColors[Math.floor(Math.random() * cColors.length)];
+    for (let i = 0; i < 20; i++) {
+      const angle = (Math.PI * 2 / 20) * i + Math.random() * 0.3;
+      const speed = 2 + Math.random() * 4;
+      explosions.push({
+        x: cx, y: cy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        size: 2 + Math.floor(Math.random() * 3) * 2,
+        color: color,
+        gravity: 0.06 + Math.random() * 0.04
+      });
+    }
+  });
+
+  // === NEBULA WAVES (aurora) ===
+  function drawAurora(t, intensity) {
+    const a = intensity || 1;
+    ctx.globalCompositeOperation = 'screen';
+    for (let i = 0; i < 3; i++) {
+      const hue = [140, 180, 270][i];
+      const yBase = H * (0.25 + i * 0.12);
+      ctx.beginPath();
+      ctx.moveTo(0, yBase);
+      for (let x = 0; x <= W; x += 8) {
+        const y = yBase + Math.sin(x * 0.003 + t * 0.0008 + i * 2) * 30
+                        + Math.sin(x * 0.007 + t * 0.0012) * 15;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(W, H);
+      ctx.lineTo(0, H);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, yBase - 40, 0, yBase + 80);
+      grad.addColorStop(0, 'transparent');
+      grad.addColorStop(0.4, `hsla(${hue}, 80%, 50%, ${0.015 * a})`);
+      grad.addColorStop(0.6, `hsla(${hue}, 80%, 50%, ${0.025 * a})`);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // === DRAW HELPERS ===
+  function px(x, y, w, h, color, alpha) {
+    ctx.globalAlpha = alpha || 1;
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.floor(x), Math.floor(y), w, h);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawCrystal(cx, cy, size, color, alpha) {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    const s = Math.floor(size / 2);
+    for (let i = 0; i <= s; i++) {
+      const w = (i + 1) * 2;
+      ctx.fillRect(Math.floor(cx - i - 1), Math.floor(cy - s + i), w, 1);
+      ctx.fillRect(Math.floor(cx - i - 1), Math.floor(cy + s - i), w, 1);
+    }
+    ctx.globalAlpha = alpha * 0.6;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(Math.floor(cx - 1), Math.floor(cy - s + 2), 2, 2);
+    ctx.globalAlpha = 1;
+  }
+
+  // === MAIN LOOP ===
+  function frame() {
+    time++;
+    ctx.clearRect(0, 0, W, H);
+
+    // day/night cycle
+    const cyclePhase = (time / 60 / CYCLE_DURATION) % 1;
+    const sky = getSkyColors(cyclePhase);
+    const daytime = isDaytime(cyclePhase);
+    // how much "night" is it (1 = full night, 0 = full day)
+    const nightAmount = daytime ? 0 : Math.min(1, Math.abs(cyclePhase < 0.5 ? cyclePhase - 0.5 : cyclePhase - 0.5) * 4);
+    const starAlpha = cyclePhase < 0.25 || cyclePhase > 0.8 ? 1 : cyclePhase < 0.4 ? Math.max(0, 1 - (cyclePhase - 0.25) / 0.15) : cyclePhase > 0.65 ? Math.min(1, (cyclePhase - 0.65) / 0.15) : 0;
+
+    // background gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, `rgb(${sky.top})`);
+    grad.addColorStop(0.5, `rgb(${sky.mid})`);
+    grad.addColorStop(1, `rgb(${sky.bot})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // pixel sun/moon
+    const celestialY = H * (0.15 + 0.2 * Math.sin(cyclePhase * Math.PI * 2 - Math.PI / 2));
+    const celestialX = W * (0.15 + cyclePhase * 0.7);
+    // sun visible during day phases (0.28 - 0.78)
+    const sunVisible = cyclePhase > 0.28 && cyclePhase < 0.78;
+    if (sunVisible) {
+      const sunPhase = (cyclePhase - 0.28) / 0.5; // 0..1 across sun's arc
+      const sunX = W * (0.1 + sunPhase * 0.8);
+      const sunY = H * (0.35 - 0.25 * Math.sin(sunPhase * Math.PI));
+      const sunSize = 20;
+      // warmer color near horizon, brighter at peak
+      const horizon = Math.sin(sunPhase * Math.PI);
+      const sr = 255, sg = Math.round(200 + horizon * 50), sb = Math.round(80 + horizon * 100);
+      ctx.fillStyle = `rgb(${sr},${sg},${sb})`;
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(Math.floor(sunX - sunSize/2), Math.floor(sunY - sunSize/2), sunSize, sunSize);
+      // soft glow
+      const glow = ctx.createRadialGradient(sunX, sunY, sunSize/2, sunX, sunY, sunSize * 3);
+      glow.addColorStop(0, `rgba(${sr},${sg},${sb},0.12)`);
+      glow.addColorStop(0.5, `rgba(${sr},${sg},${sb},0.04)`);
+      glow.addColorStop(1, 'transparent');
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = glow;
+      ctx.fillRect(sunX - sunSize*3, sunY - sunSize*3, sunSize*6, sunSize*6);
+      // pixel rays
+      ctx.globalAlpha = 0.2 * horizon;
+      ctx.fillStyle = `rgb(${sr},${sg},${sb})`;
+      ctx.fillRect(Math.floor(sunX - 1), Math.floor(sunY - sunSize - 4), 2, 4);
+      ctx.fillRect(Math.floor(sunX - 1), Math.floor(sunY + sunSize/2), 2, 4);
+      ctx.fillRect(Math.floor(sunX - sunSize - 4), Math.floor(sunY - 1), 4, 2);
+      ctx.fillRect(Math.floor(sunX + sunSize/2), Math.floor(sunY - 1), 4, 2);
+      ctx.globalAlpha = 1;
+    }
+
+    // aurora (only at night)
+    if (starAlpha > 0.1) drawAurora(time, starAlpha);
+
+    const mx = (mouseX - 0.5);
+    const my = (mouseY - 0.5);
+
+    // star layers (fade during day)
+    for (const l of layers) {
+      const ox = mx * W * l.parallax;
+      const oy = my * H * l.parallax;
+      for (const s of l.stars) {
+        s.phase += s.twinkleSpeed;
+        const alpha = (0.3 + Math.sin(s.phase) * 0.4) * starAlpha;
+        if (alpha > 0.01) px(s.x + ox, s.y + oy, l.size, l.size, l.color, alpha);
+      }
+    }
+
+    // shooting stars (only at night-ish)
+    if (Math.random() < 0.012 * starAlpha) spawnShooter();
+    for (let i = shooters.length - 1; i >= 0; i--) {
+      const s = shooters[i];
+      s.x += s.vx; s.y += s.vy;
+      s.life -= 0.015;
+      if (s.life <= 0) { shooters.splice(i, 1); continue; }
+      for (let t = 0; t < s.length; t += 3) {
+        const a = s.life * (1 - t / s.length) * 0.8;
+        px(s.x - s.vx * t * 0.15, s.y - s.vy * t * 0.15, 2, 2, s.color, a);
+      }
+      px(s.x, s.y, 3, 3, '#ffffff', s.life);
+    }
+
+    // floating crystals (brighter at night)
+    const crystalBoost = 0.5 + starAlpha * 0.5;
+    for (const c of crystals) {
+      c.phase += c.floatSpeed;
+      const fx = c.x + mx * W * c.parallax;
+      const fy = c.y + Math.sin(c.phase) * c.floatAmp + my * H * c.parallax;
+      drawCrystal(fx, fy, c.size, c.color, c.alpha * crystalBoost);
+    }
+
+    // mouse trail
+    const dx = mouseX - prevMouseX;
+    const dy = mouseY - prevMouseY;
+    const speed = Math.sqrt(dx*dx + dy*dy);
+    if (speed > 0.003) {
+      trail.push({
+        x: mouseX * W, y: mouseY * H,
+        life: 1,
+        size: 2 + Math.floor(Math.random() * 2) * 2,
+        color: cColors[Math.floor(Math.random() * cColors.length)]
+      });
+    }
+    prevMouseX += (mouseX - prevMouseX) * 0.3;
+    prevMouseY += (mouseY - prevMouseY) * 0.3;
+
+    for (let i = trail.length - 1; i >= 0; i--) {
+      const p = trail[i];
+      p.life -= 0.04;
+      if (p.life <= 0) { trail.splice(i, 1); continue; }
+      px(p.x, p.y, p.size, p.size, p.color, p.life * 0.6);
+    }
+    if (trail.length > 50) trail.splice(0, trail.length - 50);
+
+    // click explosions
+    for (let i = explosions.length - 1; i >= 0; i--) {
+      const p = explosions[i];
+      p.x += p.vx; p.y += p.vy;
+      p.vy += p.gravity;
+      p.vx *= 0.98;
+      p.life -= 0.025;
+      if (p.life <= 0) { explosions.splice(i, 1); continue; }
+      px(p.x, p.y, p.size, p.size, p.color, p.life);
+      // sparkle trail
+      if (p.life > 0.3) {
+        px(p.x - p.vx, p.y - p.vy, 2, 2, p.color, p.life * 0.3);
+      }
+    }
+
+    // toggle daytime class for text styling
+    if (daytime && !heroEl.classList.contains('daytime')) heroEl.classList.add('daytime');
+    else if (!daytime && heroEl.classList.contains('daytime')) heroEl.classList.remove('daytime');
+
+    // center glow (stronger at night)
+    const glowAlpha = 0.01 + starAlpha * 0.025;
+    const grd = ctx.createRadialGradient(W/2, H*0.38, 0, W/2, H*0.38, W*0.35);
+    grd.addColorStop(0, `rgba(0,255,136,${glowAlpha})`);
+    grd.addColorStop(1, 'rgba(0,255,136,0)');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, W, H);
+
+    requestAnimationFrame(frame);
+  }
+  frame();
+
+  // resize handler
+  window.addEventListener('resize', () => {
+    const oldW = W, oldH = H;
+    resize();
+    for (const l of layers) {
+      for (const s of l.stars) { s.x = (s.x / oldW) * W; s.y = (s.y / oldH) * H; }
+    }
+    for (const c of crystals) { c.x = (c.x / oldW) * W; c.y = (c.y / oldH) * H; }
+  });
+})();
+
+/* ===== SCROLL REVEAL FOR CARDS ===== */
+(function() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+
+  // observe cards after they're loaded
+  const grid = document.getElementById('projects-grid');
+  const mo = new MutationObserver(() => {
+    grid.querySelectorAll('.project-card').forEach(c => observer.observe(c));
+  });
+  mo.observe(grid, { childList: true });
+})();
+
+/* ===== GITHUB REPOS ===== */
+const LANG_COLORS = {
+  JavaScript:'#f1e05a', TypeScript:'#3178c6', Python:'#3572a5',
+  Go:'#00add8', Rust:'#dea584', HTML:'#e34c26', CSS:'#563d7c',
+  Shell:'#89e051', C:'#555555', 'C++':'#f34b7d', Java:'#b07219',
+  Ruby:'#701516', PHP:'#4f5d95', Swift:'#f05138', Kotlin:'#a97bff',
+  Dart:'#00b4ab', Vue:'#41b883', Svelte:'#ff3e00', Lua:'#000080',
+  Zig:'#ec915c'
+};
+
+async function loadRepos() {
+  const grid = document.getElementById('projects-grid');
+  try {
+    const res = await fetch('https://api.github.com/users/veloxico/repos?sort=pushed&per_page=30');
+    if (!res.ok) throw new Error(res.status);
+    let repos = await res.json();
+    repos = repos.filter(r => !r.fork && r.name !== 'veloxico-site').sort((a, b) => b.stargazers_count - a.stargazers_count).slice(0, 12);
+    if (!repos.length) { grid.innerHTML = '<div class="projects-loading">NO REPOS YET</div>'; return; }
+
+    grid.innerHTML = repos.map(r => {
+      const lc = LANG_COLORS[r.language] || '#888';
+      const desc = r.description ? (r.description.length > 90 ? r.description.slice(0, 87) + '...' : r.description) : 'No description';
+      return `<a class="project-card" href="${r.html_url}" target="_blank" rel="noopener">
+        <div class="project-name">${r.name}</div>
+        <div class="project-desc">${desc}</div>
+        <div class="project-meta">
+          ${r.language ? `<span class="project-lang"><span class="lang-dot" style="background:${lc}"></span>${r.language}</span>` : ''}
+          ${r.stargazers_count > 0 ? `<span class="project-stars">★ ${r.stargazers_count}</span>` : ''}
+        </div>
+      </a>`;
+    }).join('');
+  } catch(e) {
+    grid.innerHTML = '<div class="projects-loading">FAILED TO LOAD</div>';
+  }
+}
+loadRepos();
+
+/* ===== HERO-SUB TYPEWRITER ON DAY/NIGHT ===== */
+(function() {
+  const el = document.getElementById('hero-sub');
+  const TEXT = 'OPEN SOURCE & PROJECTS';
+  let wasDaytime = null;
+  let isAnimating = false;
+
+  function typeWrite(cb) {
+    isAnimating = true;
+    let i = 0;
+    el.innerHTML = '<span class="cursor-blink"></span>';
+    const interval = setInterval(() => {
+      el.innerHTML = TEXT.slice(0, i + 1) + '<span class="cursor-blink"></span>';
+      i++;
+      if (i >= TEXT.length) {
+        clearInterval(interval);
+        setTimeout(() => {
+          el.innerHTML = TEXT + '<span class="cursor-blink"></span>';
+          isAnimating = false;
+          if (cb) cb();
+        }, 1200);
+      }
+    }, 50);
+  }
+
+  function eraseAndRetype() {
+    if (isAnimating) return;
+    isAnimating = true;
+    let i = TEXT.length;
+    const eraseInterval = setInterval(() => {
+      i--;
+      if (i <= 0) {
+        clearInterval(eraseInterval);
+        el.innerHTML = '<span class="cursor-blink"></span>';
+        setTimeout(() => typeWrite(null), 400);
+      } else {
+        el.innerHTML = TEXT.slice(0, i) + '<span class="cursor-blink"></span>';
+      }
+    }, 30);
+  }
+
+  // initial type after fade-in
+  setTimeout(() => typeWrite(null), 1500);
+
+  // watch for day/night transitions
+  setInterval(() => {
+    if (isAnimating) return;
+    const hero = document.getElementById('hero');
+    const isDaytime = hero.classList.contains('daytime');
+    if (wasDaytime !== null && isDaytime !== wasDaytime) {
+      eraseAndRetype();
+    }
+    wasDaytime = isDaytime;
+  }, 500);
+})();
+
+/* ===== ROTATING BIO WITH DECODE EFFECT ===== */
+(function() {
+  const phrases = [
+    'DevOps by day, vibe-coder by night',
+    'I don\'t fix bugs, I add features',
+    'git push --force and pray',
+    'It works on my machine (tm)',
+    'sudo rm -rf /sleep',
+    'Infrastructure as code, bugs as features',
+    'Powered by mass amounts of coffee',
+    'YAML engineer & pipeline whisperer',
+    'Turning coffee into infrastructure',
+    'chmod 777 my_life',
+  ];
+
+  const el = document.getElementById('hero-bio');
+  const glitchChars = '!@#$%^&*_+-=[]{}|;:<>?/~0123456789';
+  let phraseIdx = 0;
+  let isDecoding = false;
+
+  function decode(text) {
+    if (isDecoding) return;
+    isDecoding = true;
+    const len = text.length;
+    const resolved = new Array(len).fill(false);
+    let iterations = 0;
+    const maxIterations = 12;
+
+    const interval = setInterval(() => {
+      iterations++;
+      let html = '';
+      for (let i = 0; i < len; i++) {
+        if (resolved[i]) {
+          html += `<span class="char-done">${text[i]}</span>`;
+        } else if (text[i] === ' ') {
+          resolved[i] = true;
+          html += ' ';
+        } else {
+          // gradually resolve characters
+          if (iterations > maxIterations * (i / len) + 2 + Math.random() * 3) {
+            resolved[i] = true;
+            html += `<span class="char-done">${text[i]}</span>`;
+          } else {
+            html += `<span class="char-glitch">${glitchChars[Math.floor(Math.random() * glitchChars.length)]}</span>`;
+          }
+        }
+      }
+      el.innerHTML = html;
+
+      if (resolved.every(Boolean)) {
+        clearInterval(interval);
+        el.innerHTML = text;
+        isDecoding = false;
+      }
+    }, 60);
+  }
+
+  // start after fade-in animation
+  setTimeout(() => {
+    decode(phrases[0]);
+
+    setInterval(() => {
+      phraseIdx = (phraseIdx + 1) % phrases.length;
+      decode(phrases[phraseIdx]);
+    }, 4000);
+  }, 2000);
+})();
+
+/* ===== COPY ===== */
+function copyAddr(el) {
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    el.classList.add('copied');
+    const orig = el.textContent;
+    el.textContent = 'COPIED!';
+    setTimeout(() => { el.textContent = orig; el.classList.remove('copied'); }, 1500);
+  });
+}
+</script>
+
 </body>
 </html>
