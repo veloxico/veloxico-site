@@ -330,29 +330,39 @@
     .donate-list {
       list-style: none;
       font-size: clamp(0.55rem, 1.5vw, 0.7rem);
-      line-height: 2.5;
     }
     .donate-list li {
       display: flex;
-      align-items: baseline;
-      gap: 0.8rem;
-      flex-wrap: wrap;
-      margin-bottom: 0.8rem;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1.2rem;
     }
     .donate-label {
       color: var(--cyan);
-      min-width: 120px;
     }
     .donate-addr {
       color: #aaaacc;
       word-break: break-all;
       cursor: pointer;
-      transition: color 0.2s;
+      transition: all 0.2s ease;
       font-size: clamp(0.5rem, 1.2vw, 0.65rem);
       line-height: 1.4;
+      padding: 0.6rem 0.8rem;
+      background: rgba(0, 255, 136, 0.03);
+      border: 1px solid rgba(0, 255, 136, 0.1);
     }
-    .donate-addr:hover { color: #ffffff; }
-    .donate-addr.copied { color: var(--green); }
+    .donate-addr:hover { 
+      color: #ffffff; 
+      background: rgba(0, 255, 136, 0.1);
+      border-color: rgba(0, 255, 136, 0.4);
+      transform: translateX(4px);
+    }
+    .donate-addr.copied { 
+      color: var(--bg) !important;
+      background: var(--green) !important;
+      border-color: var(--green) !important;
+      transform: translateX(0);
+    }
 
     .links-list {
       list-style: none;
