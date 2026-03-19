@@ -75,6 +75,8 @@
       z-index: 10;
       text-align: center;
       pointer-events: none;
+      padding: 1rem 3rem 2rem;
+      margin-top: 2vh;
     }
 
     .hero-title {
@@ -99,11 +101,12 @@
 
     .hero-sub {
       font-size: clamp(0.4rem, 1.2vw, 0.65rem);
-      color: var(--dim);
-      margin-top: 1.2rem;
+      color: #aabbcc;
+      margin-top: 0.8rem;
       letter-spacing: 0.25em;
       opacity: 0;
-      animation: fade-up 1s ease-out 1.2s forwards;
+      animation: fade-up 1s ease-out 2.0s forwards;
+      text-shadow: 0 0 8px rgba(0,0,0,0.8), 0 2px 4px rgba(0,0,0,0.6);
     }
     .hero-sub.daytime {
       color: rgba(255,255,255,0.7);
@@ -129,8 +132,9 @@
       margin-top: 1rem;
       letter-spacing: 0.1em;
       opacity: 0;
-      animation: fade-up 1s ease-out 1.5s forwards;
+      animation: fade-up 1s ease-out 2.3s forwards;
       min-height: 1.5em;
+      text-shadow: 0 0 8px rgba(0,0,0,0.8), 0 2px 4px rgba(0,0,0,0.6);
       white-space: nowrap;
       transition: color 2s;
     }
@@ -155,7 +159,7 @@
 
     .hero-cta {
       display: inline-block;
-      margin-top: 2.5rem;
+      margin-top: 22vh;
       font-family: inherit;
       font-size: clamp(0.35rem, 0.9vw, 0.5rem);
       color: var(--cyan);
@@ -419,9 +423,9 @@
   <canvas id="scene"></canvas>
   <div class="hero-content">
     <h1 class="hero-title">VELOXICO</h1>
+    <a href="#projects" class="hero-cta">EXPLORE</a>
     <p class="hero-sub" id="hero-sub"></p>
     <p class="hero-bio" id="hero-bio"></p>
-    <a href="#projects" class="hero-cta">EXPLORE</a>
   </div>
 </div>
 
@@ -459,7 +463,7 @@
 </footer>
 
 <script>
-/* ===== INTERACTIVE PIXEL SPACE SCENE ===== */
+/* ===== INTERACTIVE PIXEL MEDITERRANEAN BAY ===== */
 (function() {
   const canvas = document.getElementById('scene');
   const ctx = canvas.getContext('2d');
@@ -467,62 +471,46 @@
   let mouseX = 0.5, mouseY = 0.5;
   let prevMouseX = 0.5, prevMouseY = 0.5;
   let time = 0;
-  const CYCLE_DURATION = 60; // full day/night cycle in seconds
+  const CYCLE_DURATION = 60;
+  const PX = 4; // pixel block size
 
-  // Day/night sky color stops: [top, mid, bottom]
-  // Harmonized palette — all phases complement the green (#00ff88) title
   const skyPhases = [
-    { at: 0.00, top: [6,6,18],     mid: [10,10,30],    bot: [14,14,38]   },  // deep night
-    { at: 0.15, top: [12,10,32],   mid: [18,14,42],    bot: [28,18,52]   },  // late night
-    { at: 0.22, top: [32,18,52],   mid: [55,30,65],    bot: [80,45,70]   },  // pre-dawn (purple)
-    { at: 0.28, top: [60,40,75],   mid: [110,65,80],   bot: [160,95,85]  },  // dawn (rose-purple)
-    { at: 0.33, top: [70,55,90],   mid: [130,100,110], bot: [180,140,120]},  // sunrise (warm lavender)
-    { at: 0.40, top: [45,90,160],  mid: [75,130,190],  bot: [110,165,210]},  // morning
-    { at: 0.50, top: [35,80,150],  mid: [60,115,185],  bot: [95,150,205] },  // midday
-    { at: 0.60, top: [45,85,155],  mid: [70,120,185],  bot: [100,155,208]},  // afternoon
-    { at: 0.68, top: [70,60,110],  mid: [130,85,95],   bot: [175,115,85] },  // golden hour
-    { at: 0.75, top: [50,30,75],   mid: [90,45,70],    bot: [140,65,60]  },  // sunset (muted coral-purple)
-    { at: 0.82, top: [30,18,55],   mid: [45,25,60],    bot: [60,30,65]   },  // dusk
-    { at: 0.90, top: [14,12,35],   mid: [18,15,42],    bot: [22,18,48]   },  // twilight
-    { at: 1.00, top: [6,6,18],     mid: [10,10,30],    bot: [14,14,38]   },  // deep night again
+    { at: 0.00, top: [6,6,18],     mid: [10,10,30],    bot: [14,14,38]   },
+    { at: 0.15, top: [12,10,32],   mid: [18,14,42],    bot: [28,18,52]   },
+    { at: 0.22, top: [32,18,52],   mid: [55,30,65],    bot: [80,45,70]   },
+    { at: 0.28, top: [60,40,75],   mid: [110,65,80],   bot: [160,95,85]  },
+    { at: 0.33, top: [70,55,90],   mid: [130,100,110], bot: [180,140,120]},
+    { at: 0.40, top: [45,90,160],  mid: [75,130,190],  bot: [110,165,210]},
+    { at: 0.50, top: [35,80,150],  mid: [60,115,185],  bot: [95,150,205] },
+    { at: 0.60, top: [45,85,155],  mid: [70,120,185],  bot: [100,155,208]},
+    { at: 0.68, top: [70,60,110],  mid: [130,85,95],   bot: [175,115,85] },
+    { at: 0.75, top: [50,30,75],   mid: [90,45,70],    bot: [140,65,60]  },
+    { at: 0.82, top: [30,18,55],   mid: [45,25,60],    bot: [60,30,65]   },
+    { at: 0.90, top: [14,12,35],   mid: [18,15,42],    bot: [22,18,48]   },
+    { at: 1.00, top: [6,6,18],     mid: [10,10,30],    bot: [14,14,38]   },
   ];
 
   function lerpColor(a, b, t) {
-    return [
-      Math.round(a[0] + (b[0] - a[0]) * t),
-      Math.round(a[1] + (b[1] - a[1]) * t),
-      Math.round(a[2] + (b[2] - a[2]) * t)
-    ];
+    return [Math.round(a[0]+(b[0]-a[0])*t), Math.round(a[1]+(b[1]-a[1])*t), Math.round(a[2]+(b[2]-a[2])*t)];
   }
+  function lerpVal(a, b, t) { return a + (b - a) * t; }
 
   function getSkyColors(phase) {
-    // phase 0..1
     let i = 0;
-    while (i < skyPhases.length - 1 && skyPhases[i + 1].at <= phase) i++;
-    const a = skyPhases[i];
-    const b = skyPhases[Math.min(i + 1, skyPhases.length - 1)];
-    const range = b.at - a.at || 1;
-    const t = (phase - a.at) / range;
-    return {
-      top: lerpColor(a.top, b.top, t),
-      mid: lerpColor(a.mid, b.mid, t),
-      bot: lerpColor(a.bot, b.bot, t)
-    };
+    while (i < skyPhases.length - 1 && skyPhases[i+1].at <= phase) i++;
+    const a = skyPhases[i], b = skyPhases[Math.min(i+1, skyPhases.length-1)];
+    const t = (phase - a.at) / (b.at - a.at || 1);
+    return { top: lerpColor(a.top, b.top, t), mid: lerpColor(a.mid, b.mid, t), bot: lerpColor(a.bot, b.bot, t) };
   }
 
-  function isDaytime(phase) {
-    return phase > 0.35 && phase < 0.65;
-  }
+  function isDaytime(phase) { return phase > 0.35 && phase < 0.65; }
 
   function resize() {
     const dpr = Math.min(window.devicePixelRatio, 2);
-    W = canvas.clientWidth;
-    H = canvas.clientHeight;
-    canvas.width = W * dpr;
-    canvas.height = H * dpr;
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    canvas.width = W * dpr; canvas.height = H * dpr;
     ctx.scale(dpr, dpr);
   }
-  window.addEventListener('resize', resize);
   resize();
 
   const heroEl = document.getElementById('hero');
@@ -532,127 +520,467 @@
     mouseY = (e.clientY - rect.top) / rect.height;
   });
 
-  // === STARS (3 layers) ===
-  const layers = [
-    { count: 100, size: 2, parallax: 0.02, color: '#333355' },
-    { count: 60,  size: 2, parallax: 0.04, color: '#555577' },
-    { count: 30,  size: 3, parallax: 0.07, color: '#8888aa' },
-  ];
-  for (const l of layers) {
-    l.stars = [];
-    for (let i = 0; i < l.count; i++) {
-      l.stars.push({
-        x: Math.random() * W, y: Math.random() * H,
-        phase: Math.random() * Math.PI * 2,
-        twinkleSpeed: 0.01 + Math.random() * 0.03
-      });
-    }
-  }
-
-  // === SHOOTING STARS ===
-  const shooters = [];
-  function spawnShooter() {
-    shooters.push({
-      x: Math.random() * W * 0.7,
-      y: Math.random() * H * 0.35,
-      vx: 4 + Math.random() * 5,
-      vy: 2 + Math.random() * 2.5,
-      life: 1,
-      length: 25 + Math.random() * 35,
-      color: ['#00ff88','#4ecdc4','#a855f7','#ff6b35'][Math.floor(Math.random()*4)]
-    });
-  }
-
-  // === FLOATING CRYSTALS ===
-  const crystals = [];
-  const cColors = ['#00ff88','#4ecdc4','#a855f7','#ff6b35','#ffdd33'];
-  for (let i = 0; i < 8; i++) {
-    crystals.push({
-      x: Math.random() * W, y: H * 0.15 + Math.random() * H * 0.6,
-      size: 6 + Math.floor(Math.random() * 4) * 2,
-      color: cColors[Math.floor(Math.random() * cColors.length)],
-      phase: Math.random() * Math.PI * 2,
-      floatSpeed: 0.008 + Math.random() * 0.012,
-      floatAmp: 8 + Math.random() * 12,
-      parallax: 0.03 + Math.random() * 0.05,
-      alpha: 0.15 + Math.random() * 0.25
-    });
-  }
-
-  // === MOUSE TRAIL PARTICLES ===
-  const trail = [];
-
-  // === CLICK EXPLOSIONS ===
-  const explosions = [];
-  heroEl.addEventListener('click', e => {
-    const rect = canvas.getBoundingClientRect();
-    const cx = e.clientX - rect.left;
-    const cy = e.clientY - rect.top;
-    const color = cColors[Math.floor(Math.random() * cColors.length)];
-    for (let i = 0; i < 20; i++) {
-      const angle = (Math.PI * 2 / 20) * i + Math.random() * 0.3;
-      const speed = 2 + Math.random() * 4;
-      explosions.push({
-        x: cx, y: cy,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        life: 1,
-        size: 2 + Math.floor(Math.random() * 3) * 2,
-        color: color,
-        gravity: 0.06 + Math.random() * 0.04
-      });
-    }
-  });
-
-  // === NEBULA WAVES (aurora) ===
-  function drawAurora(t, intensity) {
-    const a = intensity || 1;
-    ctx.globalCompositeOperation = 'screen';
-    for (let i = 0; i < 3; i++) {
-      const hue = [140, 180, 270][i];
-      const yBase = H * (0.25 + i * 0.12);
-      ctx.beginPath();
-      ctx.moveTo(0, yBase);
-      for (let x = 0; x <= W; x += 8) {
-        const y = yBase + Math.sin(x * 0.003 + t * 0.0008 + i * 2) * 30
-                        + Math.sin(x * 0.007 + t * 0.0012) * 15;
-        ctx.lineTo(x, y);
-      }
-      ctx.lineTo(W, H);
-      ctx.lineTo(0, H);
-      ctx.closePath();
-      const grad = ctx.createLinearGradient(0, yBase - 40, 0, yBase + 80);
-      grad.addColorStop(0, 'transparent');
-      grad.addColorStop(0.4, `hsla(${hue}, 80%, 50%, ${0.015 * a})`);
-      grad.addColorStop(0.6, `hsla(${hue}, 80%, 50%, ${0.025 * a})`);
-      grad.addColorStop(1, 'transparent');
-      ctx.fillStyle = grad;
-      ctx.fill();
-    }
-    ctx.globalCompositeOperation = 'source-over';
-  }
-
-  // === DRAW HELPERS ===
+  // === HELPERS ===
   function px(x, y, w, h, color, alpha) {
-    ctx.globalAlpha = alpha || 1;
+    ctx.globalAlpha = alpha != null ? alpha : 1;
     ctx.fillStyle = color;
     ctx.fillRect(Math.floor(x), Math.floor(y), w, h);
     ctx.globalAlpha = 1;
   }
+  function rgb(r,g,b) { return `rgb(${r},${g},${b})`; }
+  function rgba(r,g,b,a) { return `rgba(${r},${g},${b},${a})`; }
 
-  function drawCrystal(cx, cy, size, color, alpha) {
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = color;
-    const s = Math.floor(size / 2);
-    for (let i = 0; i <= s; i++) {
-      const w = (i + 1) * 2;
-      ctx.fillRect(Math.floor(cx - i - 1), Math.floor(cy - s + i), w, 1);
-      ctx.fillRect(Math.floor(cx - i - 1), Math.floor(cy + s - i), w, 1);
+  // === STARS ===
+  const starLayers = [
+    { count: 80, size: 2, parallax: 0.02 },
+    { count: 40, size: 2, parallax: 0.04 },
+    { count: 20, size: 3, parallax: 0.07 },
+  ];
+  for (const l of starLayers) {
+    l.stars = [];
+    for (let i = 0; i < l.count; i++) {
+      l.stars.push({
+        x: Math.random(), y: Math.random() * 0.45,
+        phase: Math.random() * Math.PI * 2,
+        twinkleSpeed: 0.01 + Math.random() * 0.03,
+        brightness: 0.4 + Math.random() * 0.6
+      });
     }
-    ctx.globalAlpha = alpha * 0.6;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(Math.floor(cx - 1), Math.floor(cy - s + 2), 2, 2);
-    ctx.globalAlpha = 1;
+  }
+
+  // === MOUNTAIN PROFILES (generated once, scale on draw) ===
+  function genMountainProfile(peaks, roughness, seed) {
+    const pts = [];
+    const rng = (function(s) { return function() { s=(s*9301+49297)%233280; return s/233280; }; })(seed);
+    for (let x = -0.15; x <= 1.15; x += 0.005) {
+      let y = 0;
+      for (let p = 0; p < peaks.length; p++) {
+        const pk = peaks[p];
+        const d = (x - pk.x);
+        y += pk.h * Math.exp(-d * d / (2 * pk.w * pk.w));
+      }
+      y += (rng() - 0.5) * roughness;
+      pts.push({ x, y: Math.max(0, y) });
+    }
+    return pts;
+  }
+
+  // far mountains (bluish, tall)
+  const farMtnProfile = genMountainProfile([
+    { x: 0.15, h: 0.22, w: 0.12 },
+    { x: 0.35, h: 0.28, w: 0.10 },
+    { x: 0.55, h: 0.18, w: 0.14 },
+    { x: 0.78, h: 0.25, w: 0.11 },
+    { x: 0.92, h: 0.15, w: 0.08 },
+  ], 0.008, 42);
+
+  // mid mountains (green, medium)
+  const midMtnProfile = genMountainProfile([
+    { x: 0.08, h: 0.18, w: 0.09 },
+    { x: 0.25, h: 0.14, w: 0.07 },
+    { x: 0.42, h: 0.10, w: 0.08 },
+    { x: 0.70, h: 0.12, w: 0.09 },
+    { x: 0.88, h: 0.17, w: 0.08 },
+  ], 0.006, 77);
+
+  // bay hills (left and right, forming the cove)
+  const leftHillProfile = genMountainProfile([
+    { x: -0.1, h: 0.22, w: 0.12 },
+    { x: 0.0, h: 0.22, w: 0.10 },
+    { x: 0.10, h: 0.16, w: 0.08 },
+    { x: 0.20, h: 0.08, w: 0.06 },
+    { x: 0.28, h: 0.03, w: 0.05 },
+  ], 0.005, 99);
+
+  const rightHillProfile = genMountainProfile([
+    { x: 0.74, h: 0.02, w: 0.05 },
+    { x: 0.82, h: 0.05, w: 0.06 },
+    { x: 0.90, h: 0.09, w: 0.08 },
+    { x: 1.0, h: 0.11, w: 0.09 },
+    { x: 1.1, h: 0.11, w: 0.09 },
+  ], 0.004, 197);
+
+  // === TREES (pre-generated positions) ===
+  const trees = [];
+  const treeRng = (function(s) { return function() { s=(s*9301+49297)%233280; return s/233280; }; })(555);
+  // trees on left hill
+  for (let i = 0; i < 18; i++) {
+    const tx = treeRng() * 0.28;
+    trees.push({ x: tx, hill: 'left', size: 8 + Math.floor(treeRng() * 10), type: treeRng() > 0.3 ? 'pine' : 'palm' });
+  }
+  // trees on right hill
+  for (let i = 0; i < 18; i++) {
+    const tx = 0.72 + treeRng() * 0.28;
+    trees.push({ x: tx, hill: 'right', size: 8 + Math.floor(treeRng() * 10), type: treeRng() > 0.3 ? 'pine' : 'palm' });
+  }
+  // a few on mid mountains
+  for (let i = 0; i < 10; i++) {
+    const tx = 0.05 + treeRng() * 0.9;
+    trees.push({ x: tx, hill: 'mid', size: 4 + Math.floor(treeRng() * 5), type: 'pine' });
+  }
+
+  // === SAILBOAT ===
+  const boat = { x: 0.45, baseY: 0, phase: Math.random() * Math.PI * 2 };
+
+  // === PARTICLES ===
+  const cColors = ['#00ff88','#4ecdc4','#a855f7','#ff6b35','#ffdd33'];
+  const trail = [];
+  const explosions = [];
+  heroEl.addEventListener('click', e => {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+    const color = cColors[Math.floor(Math.random() * cColors.length)];
+    for (let i = 0; i < 20; i++) {
+      const angle = (Math.PI * 2 / 20) * i + Math.random() * 0.3;
+      const speed = 2 + Math.random() * 4;
+      explosions.push({ x: cx, y: cy, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
+        life: 1, size: 2 + Math.floor(Math.random()*3)*2, color, gravity: 0.06 + Math.random()*0.04 });
+    }
+  });
+
+  // === DRAW MOUNTAINS ===
+  function drawMountainLayer(profile, baseY, color, shadowColor, mx, parallax, pixSize, dayAmt) {
+    const ox = mx * W * parallax;
+    ctx.fillStyle = color;
+    const colW = Math.max(pixSize, Math.ceil(W * 1.3 / profile.length) + 1);
+    for (let i = 0; i < profile.length - 1; i++) {
+      const p = profile[i];
+      const screenX = p.x * W + ox;
+      const h = p.y * H * 0.8;
+      if (h > 0) {
+        ctx.fillRect(Math.floor(screenX), Math.floor(baseY - h), colW, Math.ceil(h));
+      }
+    }
+    // shadow on right side
+    if (shadowColor) {
+      ctx.fillStyle = shadowColor;
+      for (let i = 0; i < profile.length - 1; i++) {
+        const p = profile[i];
+        const next = profile[Math.min(i+1, profile.length-1)];
+        if (next.y < p.y) {
+          const screenX = p.x * W + ox;
+          const h = p.y * H * 0.8;
+          ctx.fillRect(Math.floor(screenX), Math.floor(baseY - h), colW, Math.ceil(h * 0.3));
+        }
+      }
+    }
+  }
+
+  // === DRAW PIXEL CITY (megapolis skyline) ===
+  const buildings = [];
+  const bldRng = (function(s){return function(){s=(s*9301+49297)%233280;return s/233280;};})(333);
+  const bldColors = [
+    [180, 185, 195], // steel grey
+    [160, 165, 175], // concrete
+    [140, 150, 165], // dark grey
+    [190, 195, 200], // light grey
+    [170, 175, 185], // medium grey
+    [200, 205, 210], // white-ish
+    [150, 155, 168], // blue-grey
+  ];
+  // generate ~20 buildings across the bay
+  for (let i = 0; i < 22; i++) {
+    const bw = 8 + Math.floor(bldRng() * 12);
+    buildings.push({
+      x: 0.25 + i * 0.023 + (bldRng() - 0.5) * 0.008,
+      w: bw,
+      h: 15 + Math.floor(bldRng() * 50), // tall skyscrapers
+      color: bldColors[Math.floor(bldRng() * bldColors.length)],
+      hasAntenna: bldRng() > 0.7,
+    });
+  }
+  buildings.sort((a, b) => a.h - b.h); // draw shorter first
+
+  function drawHouses(seaY, dayAmt, mx) {
+    const ox = mx * W * 0.03;
+
+    // city glow at night (behind buildings)
+    if (dayAmt < 0.4) {
+      const glowA = (0.4 - dayAmt) * 0.15;
+      const cityGlow = ctx.createRadialGradient(W * 0.43, seaY, 10, W * 0.43, seaY - 20, W * 0.25);
+      cityGlow.addColorStop(0, rgba(255, 200, 100, glowA));
+      cityGlow.addColorStop(0.5, rgba(255, 180, 80, glowA * 0.3));
+      cityGlow.addColorStop(1, 'transparent');
+      ctx.fillStyle = cityGlow;
+      ctx.fillRect(W * 0.15, seaY - 80, W * 0.6, 90);
+    }
+
+    for (const b of buildings) {
+      const bx = Math.floor(b.x * W + ox);
+      const by = Math.floor(seaY - b.h); // building top, base sits on seaY (ground level)
+
+      // building colors — darker/moodier at night, crisp at day
+      const wr = Math.round(lerpVal(b.color[0] * 0.12, b.color[0], dayAmt));
+      const wg = Math.round(lerpVal(b.color[1] * 0.12, b.color[1], dayAmt));
+      const wb = Math.round(lerpVal(b.color[2] * 0.15, b.color[2], dayAmt));
+
+      // building body
+      px(bx, by, b.w, b.h, rgb(wr, wg, wb));
+
+      // left edge highlight (sunlit side during day)
+      if (dayAmt > 0.3) {
+        px(bx, by, 2, b.h, rgb(Math.min(255,wr+25), Math.min(255,wg+25), Math.min(255,wb+20)), 0.6);
+      }
+
+      // right edge shadow (depth)
+      px(bx + b.w - 2, by, 2, b.h, rgb(Math.max(0,wr-25), Math.max(0,wg-25), Math.max(0,wb-20)));
+
+      // top cap / ledge
+      px(bx - 1, by - 2, b.w + 2, 3, rgb(Math.min(255,wr+15), Math.min(255,wg+15), Math.min(255,wb+12)));
+
+      // antenna
+      if (b.hasAntenna) {
+        const antH = 6 + Math.floor(b.h * 0.1);
+        px(bx + Math.floor(b.w/2), by - antH, 1, antH, rgb(Math.min(255,wr+20), Math.min(255,wg+20), Math.min(255,wb+15)), 0.8);
+        // blinking red light (always visible, brighter at night)
+        const blink = Math.sin(time * 0.06 + bx * 0.1) > 0 ? 1 : 0.3;
+        const lightA = dayAmt < 0.4 ? blink * 0.9 : blink * 0.4;
+        px(bx + Math.floor(b.w/2) - 1, by - antH - 1, 2, 2, rgba(255, 40, 40, lightA));
+      }
+
+      // windows grid — more rows for taller buildings
+      const winW = 3, winH = 2;
+      const cols = Math.max(1, Math.floor((b.w - 4) / 5));
+      const rows = Math.max(2, Math.floor(b.h / 8));
+      const gapX = Math.floor((b.w - 4) / cols);
+      const gapY = Math.floor((b.h - 4) / rows);
+
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const wx = bx + 2 + col * gapX;
+          const wy = by + 3 + row * gapY;
+          if (wx + winW > bx + b.w - 2 || wy + winH > by + b.h - 1) continue;
+
+          if (dayAmt < 0.4) {
+            // night: lit windows with warm colors
+            const litHash = Math.sin(wx * 0.13 + wy * 0.17 + b.x * 100) * 0.5 + 0.5;
+            if (litHash > 0.3) {
+              // variety of window colors
+              const colors = [
+                [255, 220, 100],  // warm yellow
+                [255, 240, 180],  // soft white
+                [200, 230, 255],  // cool blue
+                [255, 200, 120],  // amber
+              ];
+              const wc = colors[Math.floor(litHash * colors.length * 2) % colors.length];
+              px(wx, wy, winW, winH, rgb(wc[0], wc[1], wc[2]), 0.6 + litHash * 0.35);
+            } else {
+              px(wx, wy, winW, winH, rgb(15, 20, 35), 0.6);
+            }
+          } else {
+            // day: glass with sky reflection — alternating tints
+            const reflHash = Math.sin(wx * 0.1 + wy * 0.2) * 0.5 + 0.5;
+            const glassR = Math.round(lerpVal(100, 160, reflHash));
+            const glassG = Math.round(lerpVal(160, 200, reflHash));
+            const glassB = Math.round(lerpVal(210, 240, reflHash));
+            px(wx, wy, winW, winH, rgb(glassR, glassG, glassB), 0.7);
+            // specular glint on some windows
+            if (reflHash > 0.75) {
+              px(wx, wy, 1, 1, rgba(255, 255, 255, 0.5));
+            }
+          }
+        }
+      }
+
+      // reflection in water (subtle) — below the actual waterline
+      const waterY = seaY + 24; // offset to actual water area
+      const reflH = Math.min(b.h * 0.25, 12);
+      px(bx + 1, waterY, b.w - 2, reflH, rgb(wr, wg, wb), dayAmt < 0.4 ? 0.06 : 0.03);
+    }
+  }
+
+  // === DRAW PIXEL TREE ===
+  function drawTree(x, y, size, type, dayAmount) {
+    const g1 = Math.round(lerpVal(20, 80, dayAmount));
+    const g2 = Math.round(lerpVal(40, 140, dayAmount));
+    const g3 = Math.round(lerpVal(30, 100, dayAmount));
+    const trunk = rgb(Math.round(lerpVal(30, 90, dayAmount)), Math.round(lerpVal(15, 50, dayAmount)), Math.round(lerpVal(10, 25, dayAmount)));
+
+    if (type === 'palm') {
+      // trunk
+      px(x, y - size * 0.6, PX, size * 0.6, trunk);
+      // fronds (4 pixel clusters)
+      const leafColor = rgb(g1, g2, g1);
+      px(x - size * 0.5, y - size, size * 0.4, PX, leafColor);
+      px(x + PX, y - size, size * 0.4, PX, leafColor);
+      px(x - size * 0.3, y - size - PX, size * 0.3, PX, rgb(g1+10, g2+20, g1));
+      px(x + PX, y - size - PX, size * 0.3, PX, rgb(g1+10, g2+20, g1));
+      px(x - PX, y - size + PX, PX * 2, PX, rgb(g1, g3, g1));
+    } else {
+      // pine — triangle
+      const layers = Math.max(2, Math.floor(size / 4));
+      for (let i = 0; i < layers; i++) {
+        const w = (i + 1) * PX;
+        const ly = y - size + i * (size / layers);
+        const shade = i / layers;
+        const cr = Math.round(lerpVal(g1 - 10, g1 + 10, shade));
+        const cg = Math.round(lerpVal(g2 + 20, g2 - 10, shade));
+        px(x - w/2, ly, w, size/layers + 1, rgb(Math.max(0,cr), Math.max(0,cg), Math.max(0, cr)));
+      }
+      px(x - 1, y - 2, PX, PX + 2, trunk);
+    }
+  }
+
+  // === DRAW SEA (calm Mediterranean) ===
+  function drawSea(seaY, phase, t, mx) {
+    const dayAmount = Math.max(0, Math.min(1, phase < 0.5 ? (phase - 0.2) / 0.25 : (0.85 - phase) / 0.25));
+
+    // sea base colors
+    const seaR = Math.round(lerpVal(8, 30, dayAmount));
+    const seaG = Math.round(lerpVal(15, 120, dayAmount));
+    const seaB = Math.round(lerpVal(35, 180, dayAmount));
+
+    // fill sea area with calm gradient
+    const seaGrad = ctx.createLinearGradient(0, seaY, 0, H);
+    seaGrad.addColorStop(0, rgb(seaR, seaG, seaB));
+    seaGrad.addColorStop(0.5, rgb(Math.max(0,seaR-3), Math.max(0,seaG-8), Math.max(0,seaB-5)));
+    seaGrad.addColorStop(1, rgb(Math.max(0,seaR-6), Math.max(0,seaG-15), Math.max(0,seaB-12)));
+    ctx.fillStyle = seaGrad;
+    ctx.fillRect(0, Math.floor(seaY), W, H - seaY);
+
+    // gentle shimmer highlights — fade in/out in place, no movement
+    const bright = dayAmount > 0.3;
+    for (let row = 0; row < 14; row++) {
+      const wy = seaY + 6 + row * ((H - seaY - 10) / 14);
+      const rowFade = 1 - row / 14;
+      for (let x = 0; x < W; x += PX * 4) {
+        // each highlight has its own fixed phase based on position
+        const posHash = Math.sin(x * 0.037 + row * 7.13) * 43758.5453;
+        const uniquePhase = (posHash - Math.floor(posHash)) * Math.PI * 2;
+        // pure brightness oscillation — no spatial movement
+        const shimmer = Math.sin(uniquePhase + t * 0.008) * 0.5 + 0.5;
+        if (shimmer > 0.55) {
+          const a = (shimmer - 0.55) * 0.12 * rowFade;
+          const wColor = bright ? rgba(200, 240, 255, a) : rgba(80, 120, 180, a * 0.5);
+          px(x, wy, PX * 2, 1, wColor);
+        }
+      }
+    }
+
+    // Minecraft-style blocky shore waves
+    const BS = PX; // block size
+    const waveRows = 3; // 3 rows of wave blocks approaching shore
+    for (let row = 0; row < waveRows; row++) {
+      // each row has its own cycle — staggered timing
+      const period = 240; // frames per wave cycle
+      const phase = ((t + row * 80) % period) / period; // 0..1
+
+      // wave advances toward shore (upward) then retreats
+      // 0..0.5 = advancing, 0.5..0.8 = holding, 0.8..1 = retreating
+      let advance;
+      if (phase < 0.5) advance = phase * 2; // 0..1
+      else if (phase < 0.8) advance = 1;
+      else advance = 1 - (phase - 0.8) / 0.2; // 1..0
+
+      const waveY = seaY + row * BS - Math.round(advance * BS * 1.5);
+
+      // lighter water color for wave crest
+      const crR = Math.round(lerpVal(seaR + 10, seaR + 40, dayAmount));
+      const crG = Math.round(lerpVal(seaG + 15, seaG + 50, dayAmount));
+      const crB = Math.round(lerpVal(seaB + 10, seaB + 30, dayAmount));
+
+      // draw blocky wave — pixel blocks across the bay opening
+      for (let x = Math.floor(W * 0.18); x < W * 0.82; x += BS) {
+        // stagger blocks so it's not a straight line (Minecraft style)
+        const blockOffset = ((Math.floor(x / BS) + row) % 3 === 0) ? -BS : 0;
+        const by = waveY + blockOffset;
+
+        // wave block (subtle)
+        px(x, by, BS, BS, rgb(crR, crG, crB), 0.25);
+
+        // foam cap on top of advancing wave
+        if (advance > 0.3 && row === 0) {
+          const foamChance = Math.sin(x * 0.031 + row * 5) * 0.5 + 0.5;
+          if (foamChance > 0.5) {
+            px(x, by - BS, BS, BS, rgba(255, 255, 255, advance * (bright ? 0.12 : 0.05)));
+          }
+        }
+      }
+
+      // scattered foam blocks behind wave (retreating phase)
+      if (phase > 0.5 && row === 0) {
+        const foamFade = phase < 0.8 ? 1 : 1 - (phase - 0.8) / 0.2;
+        for (let x = Math.floor(W * 0.22); x < W * 0.78; x += BS * 4) {
+          const hash = Math.sin(x * 0.073 + row * 11) * 0.5 + 0.5;
+          if (hash > 0.6) {
+            px(x, waveY + BS, BS, BS / 2, rgba(255, 255, 255, foamFade * (bright ? 0.07 : 0.03)));
+          }
+        }
+      }
+    }
+
+    // sun/moon reflection on water (gentle column of light)
+    const sunVisible = phase > 0.28 && phase < 0.78;
+    if (sunVisible) {
+      const sunPhase = (phase - 0.28) / 0.5;
+      const reflX = W * (0.1 + sunPhase * 0.8);
+      for (let row = 0; row < 15; row++) {
+        const ry = seaY + 4 + row * 6;
+        const rw = 4 + row * 1.5;
+        const shimmer = Math.sin(t * 0.015 + row * 1.8) * 2;
+        const ra = (0.06 - row * 0.003) * dayAmount;
+        if (ra > 0) px(reflX - rw/2 + shimmer, ry, rw, 2, rgba(255, 230, 180, ra));
+      }
+    } else if (dayAmount < 0.3) {
+      // moon reflection
+      const moonReflX = W * 0.75 + mx * W * 0.02;
+      for (let row = 0; row < 10; row++) {
+        const ry = seaY + 4 + row * 5;
+        const rw = 3 + row;
+        const shimmer = Math.sin(t * 0.01 + row * 1.5) * 2;
+        const ra = (0.04 - row * 0.003) * (1 - dayAmount);
+        if (ra > 0) px(moonReflX - rw/2 + shimmer, ry, rw, 2, rgba(180, 200, 220, ra));
+      }
+    }
+  }
+
+  // === DRAW SAILBOAT ===
+  function drawSailboat(seaY, phase, t, mx) {
+    const dayAmount = Math.max(0, Math.min(1, phase < 0.5 ? (phase - 0.2) / 0.25 : (0.85 - phase) / 0.25));
+    const bx = W * (boat.x + Math.sin(t * 0.003) * 0.03) + mx * W * 0.02;
+    const bob = Math.sin(t * 0.025 + boat.phase) * 3;
+    const by = seaY + 4 + bob;
+    // hull
+    const hullColor = rgb(Math.round(lerpVal(25, 80, dayAmount)), Math.round(lerpVal(15, 40, dayAmount)), Math.round(lerpVal(10, 20, dayAmount)));
+    px(bx - 12, by, 24, PX, hullColor);
+    px(bx - 10, by + PX, 20, PX/2, rgb(Math.round(lerpVal(20, 60, dayAmount)), Math.round(lerpVal(10, 30, dayAmount)), Math.round(lerpVal(8, 15, dayAmount))));
+
+    // mast
+    const mastColor = rgb(Math.round(lerpVal(30, 100, dayAmount)), Math.round(lerpVal(20, 70, dayAmount)), Math.round(lerpVal(15, 40, dayAmount)));
+    px(bx - 1, by - 28, 2, 28, mastColor);
+
+    // sail
+    const sailAlpha = lerpVal(0.4, 0.9, dayAmount);
+    const sailR = Math.round(lerpVal(100, 245, dayAmount));
+    const sailG = Math.round(lerpVal(100, 240, dayAmount));
+    const sailB = Math.round(lerpVal(120, 235, dayAmount));
+    // main sail (triangle made of pixel rows)
+    for (let row = 0; row < 7; row++) {
+      const sw = (row + 1) * 2;
+      const sy = by - 26 + row * 3;
+      px(bx + 1, sy, sw, 3, rgba(sailR, sailG, sailB, sailAlpha));
+    }
+    // small jib sail
+    for (let row = 0; row < 4; row++) {
+      const sw = (row + 1);
+      const sy = by - 22 + row * 3;
+      px(bx - sw - 2, sy, sw + 1, 3, rgba(sailR, sailG, sailB, sailAlpha * 0.8));
+    }
+
+    // flag
+    const flagPhase = Math.sin(t * 0.08) * 2;
+    px(bx + 1, by - 30, 6 + flagPhase, PX/2, rgba(220, 50, 50, lerpVal(0.4, 0.8, dayAmount)));
+  }
+
+  // === SEAGULLS ===
+  const gulls = [];
+  for (let i = 0; i < 4; i++) {
+    gulls.push({
+      x: Math.random(), y: 0.2 + Math.random() * 0.15,
+      speed: 0.0003 + Math.random() * 0.0003,
+      wingPhase: Math.random() * Math.PI * 2,
+      wingSpeed: 0.04 + Math.random() * 0.03
+    });
   }
 
   // === MAIN LOOP ===
@@ -660,159 +988,199 @@
     time++;
     ctx.clearRect(0, 0, W, H);
 
-    // day/night cycle
     const cyclePhase = (time / 60 / CYCLE_DURATION) % 1;
     const sky = getSkyColors(cyclePhase);
     const daytime = isDaytime(cyclePhase);
-    // how much "night" is it (1 = full night, 0 = full day)
-    const nightAmount = daytime ? 0 : Math.min(1, Math.abs(cyclePhase < 0.5 ? cyclePhase - 0.5 : cyclePhase - 0.5) * 4);
-    const starAlpha = cyclePhase < 0.25 || cyclePhase > 0.8 ? 1 : cyclePhase < 0.4 ? Math.max(0, 1 - (cyclePhase - 0.25) / 0.15) : cyclePhase > 0.65 ? Math.min(1, (cyclePhase - 0.65) / 0.15) : 0;
-
-    // background gradient
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, `rgb(${sky.top})`);
-    grad.addColorStop(0.5, `rgb(${sky.mid})`);
-    grad.addColorStop(1, `rgb(${sky.bot})`);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-
-    // pixel sun/moon
-    const celestialY = H * (0.15 + 0.2 * Math.sin(cyclePhase * Math.PI * 2 - Math.PI / 2));
-    const celestialX = W * (0.15 + cyclePhase * 0.7);
-    // sun visible during day phases (0.28 - 0.78)
-    const sunVisible = cyclePhase > 0.28 && cyclePhase < 0.78;
-    if (sunVisible) {
-      const sunPhase = (cyclePhase - 0.28) / 0.5; // 0..1 across sun's arc
-      const sunX = W * (0.1 + sunPhase * 0.8);
-      const sunY = H * (0.35 - 0.25 * Math.sin(sunPhase * Math.PI));
-      const sunSize = 20;
-      // warmer color near horizon, brighter at peak
-      const horizon = Math.sin(sunPhase * Math.PI);
-      const sr = 255, sg = Math.round(200 + horizon * 50), sb = Math.round(80 + horizon * 100);
-      ctx.fillStyle = `rgb(${sr},${sg},${sb})`;
-      ctx.globalAlpha = 0.85;
-      ctx.fillRect(Math.floor(sunX - sunSize/2), Math.floor(sunY - sunSize/2), sunSize, sunSize);
-      // soft glow
-      const glow = ctx.createRadialGradient(sunX, sunY, sunSize/2, sunX, sunY, sunSize * 3);
-      glow.addColorStop(0, `rgba(${sr},${sg},${sb},0.12)`);
-      glow.addColorStop(0.5, `rgba(${sr},${sg},${sb},0.04)`);
-      glow.addColorStop(1, 'transparent');
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = glow;
-      ctx.fillRect(sunX - sunSize*3, sunY - sunSize*3, sunSize*6, sunSize*6);
-      // pixel rays
-      ctx.globalAlpha = 0.2 * horizon;
-      ctx.fillStyle = `rgb(${sr},${sg},${sb})`;
-      ctx.fillRect(Math.floor(sunX - 1), Math.floor(sunY - sunSize - 4), 2, 4);
-      ctx.fillRect(Math.floor(sunX - 1), Math.floor(sunY + sunSize/2), 2, 4);
-      ctx.fillRect(Math.floor(sunX - sunSize - 4), Math.floor(sunY - 1), 4, 2);
-      ctx.fillRect(Math.floor(sunX + sunSize/2), Math.floor(sunY - 1), 4, 2);
-      ctx.globalAlpha = 1;
-    }
-
-    // aurora (only at night)
-    if (starAlpha > 0.1) drawAurora(time, starAlpha);
-
+    const dayAmount = Math.max(0, Math.min(1, cyclePhase < 0.5 ? (cyclePhase - 0.2) / 0.25 : (0.85 - cyclePhase) / 0.25));
+    const starAlpha = cyclePhase < 0.25 || cyclePhase > 0.8 ? 1 : cyclePhase < 0.4 ? Math.max(0, 1-(cyclePhase-0.25)/0.15) : cyclePhase > 0.65 ? Math.min(1,(cyclePhase-0.65)/0.15) : 0;
     const mx = (mouseX - 0.5);
     const my = (mouseY - 0.5);
 
-    // star layers (fade during day)
-    for (const l of layers) {
+    // sky gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, H * 0.65);
+    grad.addColorStop(0, rgb(...sky.top));
+    grad.addColorStop(0.6, rgb(...sky.mid));
+    grad.addColorStop(1, rgb(...sky.bot));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // sun
+    const sunVisible = cyclePhase > 0.28 && cyclePhase < 0.78;
+    if (sunVisible) {
+      const sunPhase = (cyclePhase - 0.28) / 0.5;
+      const sunX = W * (0.1 + sunPhase * 0.8);
+      const sunY = H * (0.25 - 0.18 * Math.sin(sunPhase * Math.PI));
+      const sunSize = 16;
+      const horizon = Math.sin(sunPhase * Math.PI);
+      const sr = 255, sg = Math.round(200 + horizon*50), sb = Math.round(80 + horizon*100);
+      ctx.fillStyle = rgb(sr, sg, sb);
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(Math.floor(sunX-sunSize/2), Math.floor(sunY-sunSize/2), sunSize, sunSize);
+      const glow = ctx.createRadialGradient(sunX, sunY, sunSize/2, sunX, sunY, sunSize*4);
+      glow.addColorStop(0, rgba(sr,sg,sb,0.10));
+      glow.addColorStop(0.5, rgba(sr,sg,sb,0.03));
+      glow.addColorStop(1, 'transparent');
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = glow;
+      ctx.fillRect(sunX-sunSize*4, sunY-sunSize*4, sunSize*8, sunSize*8);
+      // rays
+      ctx.globalAlpha = 0.15 * horizon;
+      ctx.fillStyle = rgb(sr, sg, sb);
+      px(sunX-1, sunY-sunSize-4, 2, 4, rgb(sr,sg,sb), 0.15*horizon);
+      px(sunX-1, sunY+sunSize/2, 2, 4, rgb(sr,sg,sb), 0.15*horizon);
+      px(sunX-sunSize-4, sunY-1, 4, 2, rgb(sr,sg,sb), 0.15*horizon);
+      px(sunX+sunSize/2, sunY-1, 4, 2, rgb(sr,sg,sb), 0.15*horizon);
+      ctx.globalAlpha = 1;
+    }
+
+    // moon (at night)
+    if (starAlpha > 0.2) {
+      const moonX = W * 0.75 + mx * W * 0.02;
+      const moonY = H * 0.12 + my * H * 0.02;
+      px(moonX, moonY, 12, 12, rgba(220, 220, 200, starAlpha * 0.7));
+      px(moonX + 3, moonY + 2, 6, 6, rgba(200, 200, 180, starAlpha * 0.3));
+      // moon glow
+      const moonGlow = ctx.createRadialGradient(moonX+6, moonY+6, 6, moonX+6, moonY+6, 50);
+      moonGlow.addColorStop(0, rgba(180, 200, 220, 0.06 * starAlpha));
+      moonGlow.addColorStop(1, 'transparent');
+      ctx.fillStyle = moonGlow;
+      ctx.fillRect(moonX-50, moonY-50, 112, 112);
+    }
+
+    // stars
+    for (const l of starLayers) {
       const ox = mx * W * l.parallax;
       const oy = my * H * l.parallax;
       for (const s of l.stars) {
         s.phase += s.twinkleSpeed;
-        const alpha = (0.3 + Math.sin(s.phase) * 0.4) * starAlpha;
-        if (alpha > 0.01) px(s.x + ox, s.y + oy, l.size, l.size, l.color, alpha);
+        const alpha = (0.2 + Math.sin(s.phase) * 0.4) * starAlpha * s.brightness;
+        if (alpha > 0.01) {
+          const c = Math.round(120 + s.brightness * 100);
+          px(s.x * W + ox, s.y * H + oy, l.size, l.size, rgb(c, c, Math.min(255, c + 30)), alpha);
+        }
       }
     }
 
-    // shooting stars (only at night-ish)
-    if (Math.random() < 0.012 * starAlpha) spawnShooter();
-    for (let i = shooters.length - 1; i >= 0; i--) {
-      const s = shooters[i];
-      s.x += s.vx; s.y += s.vy;
-      s.life -= 0.015;
-      if (s.life <= 0) { shooters.splice(i, 1); continue; }
-      for (let t = 0; t < s.length; t += 3) {
-        const a = s.life * (1 - t / s.length) * 0.8;
-        px(s.x - s.vx * t * 0.15, s.y - s.vy * t * 0.15, 2, 2, s.color, a);
-      }
-      px(s.x, s.y, 3, 3, '#ffffff', s.life);
+    // === LANDSCAPE ===
+    const seaY = H * 0.55;
+
+    // far mountains
+    const farR = Math.round(lerpVal(15, 80, dayAmount));
+    const farG = Math.round(lerpVal(15, 90, dayAmount));
+    const farB = Math.round(lerpVal(30, 140, dayAmount));
+    drawMountainLayer(farMtnProfile, seaY, rgb(farR, farG, farB), null, mx, 0.02, PX, dayAmount);
+
+    // mid mountains (greener)
+    const midR = Math.round(lerpVal(12, 50, dayAmount));
+    const midG = Math.round(lerpVal(20, 100, dayAmount));
+    const midB = Math.round(lerpVal(15, 55, dayAmount));
+    drawMountainLayer(midMtnProfile, seaY + 10, rgb(midR, midG, midB), null, mx, 0.03, PX, dayAmount);
+
+    // trees on mid mountains
+    for (const tr of trees) {
+      if (tr.hill !== 'mid') continue;
+      const profile = midMtnProfile;
+      // map x (0..1) to profile index (profile covers -0.15..1.15)
+      const normalizedX = (tr.x + 0.15) / 1.3;
+      const idx = Math.floor(normalizedX * (profile.length - 1));
+      const hillH = profile[idx] ? profile[idx].y * H * 0.8 : 0;
+      if (hillH < 8) continue;
+      const tx = tr.x * W + mx * W * 0.03;
+      const ty = seaY + 10 - hillH;
+      drawTree(tx, ty, tr.size, tr.type, dayAmount);
     }
 
-    // floating crystals (brighter at night)
-    const crystalBoost = 0.5 + starAlpha * 0.5;
-    for (const c of crystals) {
-      c.phase += c.floatSpeed;
-      const fx = c.x + mx * W * c.parallax;
-      const fy = c.y + Math.sin(c.phase) * c.floatAmp + my * H * c.parallax;
-      drawCrystal(fx, fy, c.size, c.color, c.alpha * crystalBoost);
+    // bay hills (left and right, forming cove)
+    const hillR = Math.round(lerpVal(10, 40, dayAmount));
+    const hillG = Math.round(lerpVal(18, 85, dayAmount));
+    const hillB = Math.round(lerpVal(10, 35, dayAmount));
+    drawMountainLayer(leftHillProfile, seaY + 20, rgb(hillR, hillG, hillB), null, mx, 0.04, PX, dayAmount);
+    drawMountainLayer(rightHillProfile, seaY + 20, rgb(hillR, hillG, hillB), null, mx, 0.04, PX, dayAmount);
+
+    // trees on bay hills
+    for (const tr of trees) {
+      if (tr.hill === 'mid') continue;
+      const profile = tr.hill === 'left' ? leftHillProfile : rightHillProfile;
+      // map x (0..1) to profile index (profile covers -0.15..1.15)
+      const normalizedX = (tr.x + 0.15) / 1.3;
+      const idx = Math.floor(normalizedX * (profile.length - 1));
+      const hillH = profile[idx] ? profile[idx].y * H * 0.8 : 0;
+      if (hillH < 10) continue;
+      const tx = tr.x * W + mx * W * 0.04;
+      const ty = seaY + 20 - hillH;
+      drawTree(tx, ty, tr.size, tr.type, dayAmount);
+    }
+
+    // ground/shore strip — wide enough so buildings sit fully on land
+    const shoreTop = seaY - 6;
+    const shoreH = 30;
+    const shoreR = Math.round(lerpVal(12, 55, dayAmount));
+    const shoreG = Math.round(lerpVal(15, 75, dayAmount));
+    const shoreB = Math.round(lerpVal(10, 40, dayAmount));
+    const shoreOx = mx * W * 0.03;
+    px(W * 0.20 + shoreOx, shoreTop, W * 0.60, shoreH, rgb(shoreR, shoreG, shoreB));
+    // lighter top edge (path/road)
+    px(W * 0.21 + shoreOx, shoreTop, W * 0.58, 3, rgb(Math.min(255,shoreR+20), Math.min(255,shoreG+15), Math.min(255,shoreB+10)));
+
+    // city on the shore — buildings sit on top of shore strip
+    drawHouses(shoreTop, dayAmount, mx);
+
+    // sea
+    drawSea(seaY, cyclePhase, time, mx);
+
+    // sailboat
+    drawSailboat(seaY, cyclePhase, time, mx);
+
+    // seagulls (day only)
+    if (dayAmount > 0.2) {
+      for (const g of gulls) {
+        g.x = (g.x + g.speed) % 1.2;
+        g.wingPhase += g.wingSpeed;
+        const gx = (g.x - 0.1) * W + mx * W * 0.03;
+        const gy = g.y * H + Math.sin(g.wingPhase * 0.5) * 5 + my * H * 0.02;
+        const wing = Math.sin(g.wingPhase) * 4;
+        const gc = Math.round(lerpVal(80, 200, dayAmount));
+        px(gx - 4, gy - Math.abs(wing), 3, 1, rgb(gc,gc,gc), dayAmount * 0.6);
+        px(gx + 2, gy - Math.abs(wing), 3, 1, rgb(gc,gc,gc), dayAmount * 0.6);
+        px(gx, gy, 2, 1, rgb(gc,gc,gc), dayAmount * 0.7);
+      }
     }
 
     // mouse trail
-    const dx = mouseX - prevMouseX;
-    const dy = mouseY - prevMouseY;
+    const dx = mouseX - prevMouseX, dy = mouseY - prevMouseY;
     const speed = Math.sqrt(dx*dx + dy*dy);
     if (speed > 0.003) {
-      trail.push({
-        x: mouseX * W, y: mouseY * H,
-        life: 1,
-        size: 2 + Math.floor(Math.random() * 2) * 2,
-        color: cColors[Math.floor(Math.random() * cColors.length)]
-      });
+      trail.push({ x: mouseX*W, y: mouseY*H, life: 1,
+        size: 2 + Math.floor(Math.random()*2)*2,
+        color: cColors[Math.floor(Math.random()*cColors.length)] });
     }
     prevMouseX += (mouseX - prevMouseX) * 0.3;
     prevMouseY += (mouseY - prevMouseY) * 0.3;
-
-    for (let i = trail.length - 1; i >= 0; i--) {
-      const p = trail[i];
-      p.life -= 0.04;
-      if (p.life <= 0) { trail.splice(i, 1); continue; }
+    for (let i = trail.length-1; i >= 0; i--) {
+      const p = trail[i]; p.life -= 0.04;
+      if (p.life <= 0) { trail.splice(i,1); continue; }
       px(p.x, p.y, p.size, p.size, p.color, p.life * 0.6);
     }
     if (trail.length > 50) trail.splice(0, trail.length - 50);
 
     // click explosions
-    for (let i = explosions.length - 1; i >= 0; i--) {
+    for (let i = explosions.length-1; i >= 0; i--) {
       const p = explosions[i];
-      p.x += p.vx; p.y += p.vy;
-      p.vy += p.gravity;
-      p.vx *= 0.98;
-      p.life -= 0.025;
-      if (p.life <= 0) { explosions.splice(i, 1); continue; }
+      p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.vx *= 0.98; p.life -= 0.025;
+      if (p.life <= 0) { explosions.splice(i,1); continue; }
       px(p.x, p.y, p.size, p.size, p.color, p.life);
-      // sparkle trail
-      if (p.life > 0.3) {
-        px(p.x - p.vx, p.y - p.vy, 2, 2, p.color, p.life * 0.3);
-      }
+      if (p.life > 0.3) px(p.x-p.vx, p.y-p.vy, 2, 2, p.color, p.life*0.3);
     }
 
-    // toggle daytime class for text styling
+    // toggle daytime class
     if (daytime && !heroEl.classList.contains('daytime')) heroEl.classList.add('daytime');
     else if (!daytime && heroEl.classList.contains('daytime')) heroEl.classList.remove('daytime');
-
-    // center glow (stronger at night)
-    const glowAlpha = 0.01 + starAlpha * 0.025;
-    const grd = ctx.createRadialGradient(W/2, H*0.38, 0, W/2, H*0.38, W*0.35);
-    grd.addColorStop(0, `rgba(0,255,136,${glowAlpha})`);
-    grd.addColorStop(1, 'rgba(0,255,136,0)');
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, W, H);
 
     requestAnimationFrame(frame);
   }
   frame();
 
-  // resize handler
-  window.addEventListener('resize', () => {
-    const oldW = W, oldH = H;
-    resize();
-    for (const l of layers) {
-      for (const s of l.stars) { s.x = (s.x / oldW) * W; s.y = (s.y / oldH) * H; }
-    }
-    for (const c of crystals) { c.x = (c.x / oldW) * W; c.y = (c.y / oldH) * H; }
-  });
+  window.addEventListener('resize', () => { resize(); });
 })();
 
 /* ===== SCROLL REVEAL FOR CARDS ===== */
@@ -855,12 +1223,14 @@ async function loadRepos() {
 
     grid.innerHTML = repos.map(r => {
       const lc = LANG_COLORS[r.language] || '#888';
-      const desc = r.description ? (r.description.length > 90 ? r.description.slice(0, 87) + '...' : r.description) : 'No description';
-      return `<a class="project-card" href="${r.html_url}" target="_blank" rel="noopener">
-        <div class="project-name">${r.name}</div>
-        <div class="project-desc">${desc}</div>
+      const rawDesc = r.description || 'No description';
+      const desc = rawDesc.length > 90 ? rawDesc.slice(0, 87) + '...' : rawDesc;
+      const safeUrl = r.html_url.startsWith('https://github.com/') ? r.html_url : '#';
+      return `<a class="project-card" href="${escHtml(safeUrl)}" target="_blank" rel="noopener">
+        <div class="project-name">${escHtml(r.name)}</div>
+        <div class="project-desc">${escHtml(desc)}</div>
         <div class="project-meta">
-          ${r.language ? `<span class="project-lang"><span class="lang-dot" style="background:${lc}"></span>${r.language}</span>` : ''}
+          ${r.language ? `<span class="project-lang"><span class="lang-dot" style="background:${escHtml(lc)}"></span>${escHtml(r.language)}</span>` : ''}
           ${r.stargazers_count > 0 ? `<span class="project-stars">★ ${r.stargazers_count}</span>` : ''}
         </div>
       </a>`;
@@ -1000,6 +1370,13 @@ loadRepos();
     }, 4000);
   }, 2000);
 })();
+
+/* ===== ESCAPE HTML ===== */
+function escHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
 
 /* ===== COPY ===== */
 function copyAddr(el) {
