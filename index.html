@@ -678,18 +678,18 @@
     [200, 205, 210], // white-ish
     [150, 155, 168], // blue-grey
   ];
-  // generate ~20 buildings across the bay
+  // generate ~20 buildings — sizes stored as fractions of viewport
   for (let i = 0; i < 22; i++) {
-    const bw = 8 + Math.floor(bldRng() * 12);
+    const bw = 0.012 + bldRng() * 0.015; // width as fraction of W
     buildings.push({
       x: 0.25 + i * 0.023 + (bldRng() - 0.5) * 0.008,
-      w: bw,
-      h: 15 + Math.floor(bldRng() * 50), // tall skyscrapers
+      wFrac: bw,
+      hFrac: 0.03 + bldRng() * 0.09, // height as fraction of H
       color: bldColors[Math.floor(bldRng() * bldColors.length)],
       hasAntenna: bldRng() > 0.7,
     });
   }
-  buildings.sort((a, b) => a.h - b.h); // draw shorter first
+  buildings.sort((a, b) => a.hFrac - b.hFrac); // draw shorter first
 
   function drawHouses(seaY, dayAmt, mx) {
     const ox = mx * W * 0.03;
@@ -705,9 +705,15 @@
       ctx.fillRect(W * 0.15, seaY - 80, W * 0.6, 90);
     }
 
+    // pixel snap helper — round to nearest PX multiple
+    const snap = v => Math.round(v / PX) * PX || PX;
+
     for (const b of buildings) {
+      // compute actual pixel sizes from fractions, snapped to pixel grid
+      const bw = snap(b.wFrac * W);
+      const bh = snap(b.hFrac * H);
       const bx = Math.floor(b.x * W + ox);
-      const by = Math.floor(seaY - b.h); // building top, base sits on seaY (ground level)
+      const by = Math.floor(seaY - bh);
 
       // building colors — darker/moodier at night, crisp at day
       const wr = Math.round(lerpVal(b.color[0] * 0.12, b.color[0], dayAmt));
@@ -715,41 +721,41 @@
       const wb = Math.round(lerpVal(b.color[2] * 0.15, b.color[2], dayAmt));
 
       // building body
-      px(bx, by, b.w, b.h, rgb(wr, wg, wb));
+      px(bx, by, bw, bh, rgb(wr, wg, wb));
 
       // left edge highlight (sunlit side during day)
       if (dayAmt > 0.3) {
-        px(bx, by, 2, b.h, rgb(Math.min(255,wr+25), Math.min(255,wg+25), Math.min(255,wb+20)), 0.6);
+        px(bx, by, PX/2, bh, rgb(Math.min(255,wr+25), Math.min(255,wg+25), Math.min(255,wb+20)), 0.6);
       }
 
       // right edge shadow (depth)
-      px(bx + b.w - 2, by, 2, b.h, rgb(Math.max(0,wr-25), Math.max(0,wg-25), Math.max(0,wb-20)));
+      px(bx + bw - PX/2, by, PX/2, bh, rgb(Math.max(0,wr-25), Math.max(0,wg-25), Math.max(0,wb-20)));
 
       // top cap / ledge
-      px(bx - 1, by - 2, b.w + 2, 3, rgb(Math.min(255,wr+15), Math.min(255,wg+15), Math.min(255,wb+12)));
+      px(bx - 1, by - PX/2, bw + 2, PX, rgb(Math.min(255,wr+15), Math.min(255,wg+15), Math.min(255,wb+12)));
 
       // antenna
       if (b.hasAntenna) {
-        const antH = 6 + Math.floor(b.h * 0.1);
-        px(bx + Math.floor(b.w/2), by - antH, 1, antH, rgb(Math.min(255,wr+20), Math.min(255,wg+20), Math.min(255,wb+15)), 0.8);
-        // blinking red light (always visible, brighter at night)
+        const antH = snap(bh * 0.12);
+        px(bx + Math.floor(bw/2), by - antH, 1, antH, rgb(Math.min(255,wr+20), Math.min(255,wg+20), Math.min(255,wb+15)), 0.8);
         const blink = Math.sin(time * 0.06 + bx * 0.1) > 0 ? 1 : 0.3;
         const lightA = dayAmt < 0.4 ? blink * 0.9 : blink * 0.4;
-        px(bx + Math.floor(b.w/2) - 1, by - antH - 1, 2, 2, rgba(255, 40, 40, lightA));
+        px(bx + Math.floor(bw/2) - 1, by - antH - 1, 2, 2, rgba(255, 40, 40, lightA));
       }
 
-      // windows grid — more rows for taller buildings
-      const winW = 3, winH = 2;
-      const cols = Math.max(1, Math.floor((b.w - 4) / 5));
-      const rows = Math.max(2, Math.floor(b.h / 8));
-      const gapX = Math.floor((b.w - 4) / cols);
-      const gapY = Math.floor((b.h - 4) / rows);
+      // windows grid — scaled to building size
+      const winW = Math.max(2, snap(bw * 0.15));
+      const winH = Math.max(2, snap(bh * 0.03));
+      const cols = Math.max(1, Math.floor((bw - PX) / (winW + PX)));
+      const rows = Math.max(2, Math.floor((bh - PX) / (winH + PX * 1.5)));
+      const gapX = Math.floor((bw - PX) / Math.max(1, cols));
+      const gapY = Math.floor((bh - PX) / Math.max(1, rows));
 
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
           const wx = bx + 2 + col * gapX;
           const wy = by + 3 + row * gapY;
-          if (wx + winW > bx + b.w - 2 || wy + winH > by + b.h - 1) continue;
+          if (wx + winW > bx + bw - 2 || wy + winH > by + bh - 1) continue;
 
           if (dayAmt < 0.4) {
             // night: lit windows with warm colors
@@ -783,9 +789,9 @@
       }
 
       // reflection in water (subtle) — below the actual waterline
-      const waterY = seaY + 24; // offset to actual water area
-      const reflH = Math.min(b.h * 0.25, 12);
-      px(bx + 1, waterY, b.w - 2, reflH, rgb(wr, wg, wb), dayAmt < 0.4 ? 0.06 : 0.03);
+      const waterY = seaY + 24;
+      const reflH = Math.min(bh * 0.25, 12);
+      px(bx + 1, waterY, bw - 2, reflH, rgb(wr, wg, wb), dayAmt < 0.4 ? 0.06 : 0.03);
     }
   }
 
