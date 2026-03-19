@@ -53,6 +53,18 @@
       z-index: 0;
     }
 
+    /* Fade-to-dark overlay on scroll */
+    .hero-fade {
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 100%; height: 100%;
+      background: linear-gradient(to bottom, transparent 20%, var(--bg) 85%);
+      opacity: 0;
+      z-index: 12;
+      pointer-events: none;
+      transition: opacity 0.1s;
+    }
+
     /* CRT scanline overlay */
     .hero::after {
       content: '';
@@ -421,6 +433,7 @@
 <!-- HERO -->
 <div class="hero" id="hero">
   <canvas id="scene"></canvas>
+  <div class="hero-fade" id="hero-fade"></div>
   <div class="hero-content">
     <h1 class="hero-title">VELOXICO</h1>
     <a href="#projects" class="hero-cta">EXPLORE</a>
@@ -1187,6 +1200,19 @@
   frame();
 
   window.addEventListener('resize', () => { resize(); });
+})();
+
+/* ===== FADE-TO-DARK ON SCROLL ===== */
+(function() {
+  const fade = document.getElementById('hero-fade');
+  const hero = document.getElementById('hero');
+  window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    const heroH = hero.offsetHeight;
+    // start fading at 30% scroll, fully dark at 90%
+    const progress = Math.max(0, Math.min(1, (scrollY / heroH - 0.15) / 0.45));
+    fade.style.opacity = progress;
+  }, { passive: true });
 })();
 
 /* ===== SCROLL REVEAL FOR CARDS ===== */
