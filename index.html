@@ -945,7 +945,7 @@
     const dayAmount = Math.max(0, Math.min(1, phase < 0.5 ? (phase - 0.2) / 0.25 : (0.85 - phase) / 0.25));
     const bx = W * (boat.x + Math.sin(t * 0.003) * 0.03) + mx * W * 0.02;
     const bob = Math.sin(t * 0.025 + boat.phase) * 3;
-    const by = seaY + 4 + bob;
+    const by = seaY + 14 + bob;
     // hull
     const hullColor = rgb(Math.round(lerpVal(25, 80, dayAmount)), Math.round(lerpVal(15, 40, dayAmount)), Math.round(lerpVal(10, 20, dayAmount)));
     px(bx - 12, by, 24, PX, hullColor);
