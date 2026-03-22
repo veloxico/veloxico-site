@@ -8,7 +8,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect width='16' height='16' fill='%2306060f'/><rect x='6' y='1' width='4' height='2' fill='%2300ff88'/><rect x='4' y='3' width='8' height='2' fill='%2300ff88'/><rect x='3' y='5' width='10' height='2' fill='%234ecdc4'/><rect x='4' y='7' width='8' height='2' fill='%234ecdc4'/><rect x='5' y='9' width='6' height='2' fill='%23a855f7'/><rect x='6' y='11' width='4' height='2' fill='%23a855f7'/><rect x='7' y='13' width='2' height='2' fill='%23ff6b35'/><rect x='6' y='2' width='2' height='2' fill='%23ffffff' opacity='0.4'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=block" rel="stylesheet">
   <style>
     :root {
       --bg: #06060f;
@@ -201,8 +201,8 @@
     }
 
     @keyframes fade-up {
-      from { opacity: 0; transform: translateY(16px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     /* ===== SECTION ===== */
@@ -639,9 +639,28 @@
   const cColors = ['#00ff88','#4ecdc4','#a855f7','#ff6b35','#ffdd33'];
   const trail = [];
   const explosions = [];
+  // === EASTER EGG STATE ===
+  let ufoActive = false, ufoX = -50, ufoY = 0;
+  let moonScreenX = 0, moonScreenY = 0;
+  let rapidClicks = [], fireworkShow = false, fireworkTimer = 0;
+  let shakeOffset = 0;
+
   heroEl.addEventListener('click', e => {
     const rect = canvas.getBoundingClientRect();
     const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+
+    // Easter egg 4: 5 rapid clicks → firework show
+    const now = performance.now();
+    rapidClicks.push(now);
+    rapidClicks = rapidClicks.filter(t => now - t < 1200);
+    if (rapidClicks.length >= 5) {
+      fireworkShow = true;
+      fireworkTimer = 360; // ~6 seconds
+      rapidClicks = [];
+      return;
+    }
+
+    // normal click explosion
     const color = cColors[Math.floor(Math.random() * cColors.length)];
     for (let i = 0; i < 20; i++) {
       const angle = (Math.PI * 2 / 20) * i + Math.random() * 0.3;
@@ -650,6 +669,97 @@
         life: 1, size: 2 + Math.floor(Math.random()*3)*2, color, gravity: 0.06 + Math.random()*0.04 });
     }
   });
+
+  // Easter egg 2: double-click on moon → UFO
+  heroEl.addEventListener('dblclick', e => {
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+    // Easter egg 1: double-click sailboat → pirate mode with cannons
+    if (Math.abs(cx - boatScreenX) < 30 && Math.abs(cy - boatScreenY) < 40 && !pirateMode) {
+      pirateMode = true;
+      pirateTimer = 600; // ~10 seconds
+      nextCannonShot = 0; // fire immediately
+      return;
+    }
+    // Easter egg 2: double-click moon → UFO
+    if (Math.abs(cx - moonScreenX) < 30 && Math.abs(cy - moonScreenY) < 30 && !heroEl.classList.contains('daytime')) {
+      ufoActive = true;
+      ufoX = -40;
+      ufoY = H * 0.18 + Math.random() * H * 0.1;
+    }
+  });
+
+  // Easter egg 3: shake phone → buildings wobble
+  if (window.DeviceMotionEvent) {
+    let lastShake = 0;
+    window.addEventListener('devicemotion', e => {
+      const acc = e.accelerationIncludingGravity;
+      if (!acc) return;
+      const force = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
+      if (force > 30 && performance.now() - lastShake > 500) {
+        lastShake = performance.now();
+        shakeOffset = 6;
+      }
+    });
+  }
+
+  function drawUFO(t) {
+    if (!ufoActive) return;
+    ufoX += 1.5;
+    const uy = ufoY + Math.sin(t * 0.05) * 8;
+    if (ufoX > W + 50) { ufoActive = false; return; }
+
+    // saucer body
+    px(ufoX - 10, uy, 20, 4, rgba(160, 170, 190, 0.8));
+    px(ufoX - 6, uy - 4, 12, 4, rgba(180, 190, 210, 0.7));
+    // dome
+    px(ufoX - 4, uy - 7, 8, 3, rgba(150, 220, 255, 0.5));
+    // lights
+    const blink = Math.sin(t * 0.2) > 0;
+    px(ufoX - 8, uy + 2, 2, 2, rgba(255, 100, 100, blink ? 0.8 : 0.2));
+    px(ufoX, uy + 2, 2, 2, rgba(100, 255, 100, blink ? 0.2 : 0.8));
+    px(ufoX + 8, uy + 2, 2, 2, rgba(100, 100, 255, blink ? 0.8 : 0.2));
+    // beam
+    const beamA = 0.04 + Math.sin(t * 0.1) * 0.02;
+    ctx.save();
+    ctx.globalAlpha = beamA;
+    ctx.beginPath();
+    ctx.moveTo(ufoX - 5, uy + 4);
+    ctx.lineTo(ufoX + 5, uy + 4);
+    ctx.lineTo(ufoX + 20, H * 0.55);
+    ctx.lineTo(ufoX - 20, H * 0.55);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(150,255,200,1)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawFireworkShow(t) {
+    if (!fireworkShow) return;
+    fireworkTimer--;
+    if (fireworkTimer <= 0) { fireworkShow = false; return; }
+
+    // launch new firework every ~30 frames
+    if (fireworkTimer % 25 === 0) {
+      const fx = W * (0.15 + Math.random() * 0.7);
+      const fy = H * (0.08 + Math.random() * 0.2);
+      const fcolors = ['#ff4466','#44ff88','#4488ff','#ffdd33','#ff66ff','#66ffff','#ff8833'];
+      const color = fcolors[Math.floor(Math.random() * fcolors.length)];
+      const count = 25 + Math.floor(Math.random() * 15);
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 / count) * i + Math.random() * 0.2;
+        const speed = 1.5 + Math.random() * 3.5;
+        explosions.push({
+          x: fx, y: fy,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1.2 + Math.random() * 0.5,
+          size: 2 + Math.floor(Math.random() * 2) * 2,
+          color, gravity: 0.02 + Math.random() * 0.02
+        });
+      }
+    }
+  }
 
   // === DRAW MOUNTAINS ===
   function drawMountainLayer(profile, baseY, color, shadowColor, mx, parallax, pixSize, dayAmt) {
@@ -954,41 +1064,302 @@
   }
 
   // === DRAW SAILBOAT ===
+  let boatScreenX = 0, boatScreenY = 0;
+  let pirateMode = false, pirateTimer = 0;
+  let nextCannonShot = 0;
+
   function drawSailboat(seaY, phase, t, mx) {
     const dayAmount = Math.max(0, Math.min(1, phase < 0.5 ? (phase - 0.2) / 0.25 : (0.85 - phase) / 0.25));
     const bx = W * (boat.x + Math.sin(t * 0.003) * 0.03) + mx * W * 0.02;
     const bob = Math.sin(t * 0.025 + boat.phase) * 3;
     const by = seaY + 14 + bob;
+    boatScreenX = bx; boatScreenY = by;
+
+    const S = 1.4; // scale factor
+    ctx.save();
+    ctx.translate(bx, by);
+    ctx.scale(S, S);
+
     // hull
-    const hullColor = rgb(Math.round(lerpVal(25, 80, dayAmount)), Math.round(lerpVal(15, 40, dayAmount)), Math.round(lerpVal(10, 20, dayAmount)));
-    px(bx - 12, by, 24, PX, hullColor);
-    px(bx - 10, by + PX, 20, PX/2, rgb(Math.round(lerpVal(20, 60, dayAmount)), Math.round(lerpVal(10, 30, dayAmount)), Math.round(lerpVal(8, 15, dayAmount))));
+    const hullR = Math.round(lerpVal(25, 80, dayAmount));
+    const hullG = Math.round(lerpVal(15, 40, dayAmount));
+    const hullB = Math.round(lerpVal(10, 20, dayAmount));
+    if (pirateMode) {
+      // dark pirate hull
+      px(-12, 0, 24, PX, rgb(Math.round(hullR*0.4), Math.round(hullG*0.4), Math.round(hullB*0.5)));
+      px(-10, PX, 20, PX/2, rgb(Math.round(hullR*0.3), Math.round(hullG*0.3), Math.round(hullB*0.3)));
+    } else {
+      px(-12, 0, 24, PX, rgb(hullR, hullG, hullB));
+      px(-10, PX, 20, PX/2, rgb(Math.round(lerpVal(20, 60, dayAmount)), Math.round(lerpVal(10, 30, dayAmount)), Math.round(lerpVal(8, 15, dayAmount))));
+    }
 
     // mast
     const mastColor = rgb(Math.round(lerpVal(30, 100, dayAmount)), Math.round(lerpVal(20, 70, dayAmount)), Math.round(lerpVal(15, 40, dayAmount)));
-    px(bx - 1, by - 28, 2, 28, mastColor);
+    px(-1, -28, 2, 28, mastColor);
 
     // sail
     const sailAlpha = lerpVal(0.4, 0.9, dayAmount);
-    const sailR = Math.round(lerpVal(100, 245, dayAmount));
-    const sailG = Math.round(lerpVal(100, 240, dayAmount));
-    const sailB = Math.round(lerpVal(120, 235, dayAmount));
-    // main sail (triangle made of pixel rows)
-    for (let row = 0; row < 7; row++) {
-      const sw = (row + 1) * 2;
-      const sy = by - 26 + row * 3;
-      px(bx + 1, sy, sw, 3, rgba(sailR, sailG, sailB, sailAlpha));
-    }
-    // small jib sail
-    for (let row = 0; row < 4; row++) {
-      const sw = (row + 1);
-      const sy = by - 22 + row * 3;
-      px(bx - sw - 2, sy, sw + 1, 3, rgba(sailR, sailG, sailB, sailAlpha * 0.8));
+    if (pirateMode) {
+      // black sails
+      for (let row = 0; row < 7; row++) {
+        const sw = (row + 1) * 2;
+        const sy = -26 + row * 3;
+        px(1, sy, sw, 3, rgba(25, 20, 20, sailAlpha));
+      }
+      for (let row = 0; row < 4; row++) {
+        const sw = (row + 1);
+        const sy = -22 + row * 3;
+        px(-sw - 2, sy, sw + 1, 3, rgba(25, 20, 20, sailAlpha * 0.8));
+      }
+      // skull on main sail
+      px(5, -16, 3, 3, rgba(255, 255, 255, 0.7));
+      px(5, -12, 5, 1, rgba(255, 255, 255, 0.5));
+    } else {
+      const sailR = Math.round(lerpVal(100, 245, dayAmount));
+      const sailG = Math.round(lerpVal(100, 240, dayAmount));
+      const sailB = Math.round(lerpVal(120, 235, dayAmount));
+      for (let row = 0; row < 7; row++) {
+        const sw = (row + 1) * 2;
+        const sy = -26 + row * 3;
+        px(1, sy, sw, 3, rgba(sailR, sailG, sailB, sailAlpha));
+      }
+      for (let row = 0; row < 4; row++) {
+        const sw = (row + 1);
+        const sy = -22 + row * 3;
+        px(-sw - 2, sy, sw + 1, 3, rgba(sailR, sailG, sailB, sailAlpha * 0.8));
+      }
     }
 
     // flag
     const flagPhase = Math.sin(t * 0.08) * 2;
-    px(bx + 1, by - 30, 6 + flagPhase, PX/2, rgba(220, 50, 50, lerpVal(0.4, 0.8, dayAmount)));
+    if (pirateMode) {
+      // jolly roger flag
+      const fw = 8 + flagPhase;
+      px(1, -32, fw, 6, rgba(15, 15, 15, 0.9));
+      px(3, -31, 2, 2, rgba(255, 255, 255, 0.8));
+      px(2, -28, 1, 1, rgba(255, 255, 255, 0.6));
+      px(6, -28, 1, 1, rgba(255, 255, 255, 0.6));
+
+      // cannon fire!
+      if (t > nextCannonShot) {
+        const side = Math.random() > 0.5 ? 1 : -1;
+        const cannonX = bx + side * 14 * S;
+        const cannonY = by - 2 * S;
+        // smoke puff
+        for (let i = 0; i < 8; i++) {
+          const angle = (side > 0 ? 0 : Math.PI) + (Math.random() - 0.5) * 1.2;
+          const speed = 1.5 + Math.random() * 2.5;
+          explosions.push({
+            x: cannonX, y: cannonY,
+            vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 0.5,
+            life: 0.8 + Math.random() * 0.4,
+            size: 2 + Math.floor(Math.random() * 2) * 2,
+            color: rgba(200, 200, 200, 1), gravity: -0.01
+          });
+        }
+        // cannonball splash
+        const splashX = cannonX + side * (40 + Math.random() * 60);
+        const splashY = seaY + 10 + Math.random() * 10;
+        for (let i = 0; i < 6; i++) {
+          const angle = -Math.PI/2 + (Math.random() - 0.5) * 1.5;
+          const speed = 1 + Math.random() * 2;
+          explosions.push({
+            x: splashX, y: splashY,
+            vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+            life: 0.5 + Math.random() * 0.3,
+            size: 2, color: rgba(100, 180, 220, 1), gravity: 0.08
+          });
+        }
+        nextCannonShot = t + 40 + Math.random() * 60;
+      }
+
+      pirateTimer--;
+      if (pirateTimer <= 0) pirateMode = false;
+    } else {
+      px(1, -30, 6 + flagPhase, PX/2, rgba(220, 50, 50, lerpVal(0.4, 0.8, dayAmount)));
+    }
+
+    ctx.restore();
+  }
+
+  // === CLOUDS ===
+  const clouds = [];
+  const cloudRng = (function(s){return function(){s=(s*9301+49297)%233280;return s/233280;};})(888);
+  for (let i = 0; i < 6; i++) {
+    const blobs = [];
+    const blobCount = 3 + Math.floor(cloudRng() * 3);
+    for (let b = 0; b < blobCount; b++) {
+      blobs.push({
+        dx: (b - blobCount/2) * (8 + cloudRng() * 6),
+        dy: (cloudRng() - 0.5) * 6,
+        w: 12 + cloudRng() * 16,
+        h: 6 + cloudRng() * 6
+      });
+    }
+    clouds.push({
+      x: cloudRng(),
+      y: 0.06 + cloudRng() * 0.18,
+      speed: 0.00002 + cloudRng() * 0.00003,
+      blobs
+    });
+  }
+
+  function drawClouds(dayAmt, mx, t) {
+    for (const c of clouds) {
+      c.x = (c.x + c.speed) % 1.3;
+      const cx = (c.x - 0.15) * W + mx * W * 0.015;
+      const cy = c.y * H;
+      const a = dayAmt > 0.3 ? 0.7 : 0.12;
+      const cr = Math.round(lerpVal(30, 240, dayAmt));
+      const cg = Math.round(lerpVal(35, 245, dayAmt));
+      const cb = Math.round(lerpVal(50, 250, dayAmt));
+      for (const b of c.blobs) {
+        px(cx + b.dx, cy + b.dy, b.w, b.h, rgb(cr, cg, cb), a);
+        // highlight top
+        px(cx + b.dx + 2, cy + b.dy, b.w - 4, b.h * 0.4, rgb(Math.min(255,cr+15), Math.min(255,cg+15), Math.min(255,cb+10)), a * 0.5);
+      }
+    }
+  }
+
+
+  // === WATERFRONT LANTERNS ===
+  const lanterns = [];
+  for (let i = 0; i < 8; i++) {
+    lanterns.push({ x: 0.24 + i * 0.065 });
+  }
+
+  function drawLanterns(shoreTop, dayAmt, mx) {
+    const nightIntensity = Math.max(0, (0.4 - dayAmt) / 0.4);
+    if (nightIntensity <= 0) return; // only visible at night
+
+    const ox = mx * W * 0.03;
+    for (const l of lanterns) {
+      const lx = l.x * W + ox;
+      const ly = shoreTop - 2;
+      const poleH = 10;
+
+      // pole
+      px(lx, ly - poleH, 1, poleH, rgba(120, 120, 100, nightIntensity * 0.6));
+
+      // lamp head
+      px(lx - 1, ly - poleH - 2, 3, 2, rgba(180, 170, 140, nightIntensity * 0.7));
+
+      // warm light
+      px(lx - 1, ly - poleH - 1, 3, 1, rgba(255, 220, 120, nightIntensity * 0.9));
+
+      // glow on ground
+      const glowR = 6 + Math.round(nightIntensity * 4);
+      px(lx - glowR/2, ly - 1, glowR, 2, rgba(255, 210, 100, nightIntensity * 0.08));
+
+      // glow halo around lamp
+      const haloSize = 10;
+      const haloGrad = ctx.createRadialGradient(lx, ly - poleH - 1, 1, lx, ly - poleH - 1, haloSize);
+      haloGrad.addColorStop(0, rgba(255, 220, 120, 0.12 * nightIntensity));
+      haloGrad.addColorStop(1, 'transparent');
+      ctx.fillStyle = haloGrad;
+      ctx.fillRect(lx - haloSize, ly - poleH - 1 - haloSize, haloSize * 2, haloSize * 2);
+    }
+  }
+
+  // === WATER REFLECTION ===
+  function drawWaterReflection(seaY, dayAmt, mx, t) {
+    // reflect mountains, city, and lighthouse as wavy distorted bands
+    const reflAlpha = dayAmt > 0.3 ? 0.04 : 0.07;
+    const reflY = seaY + 2;
+    const reflH = Math.min(H - seaY - 10, 60);
+
+    // far mountains reflection
+    const farR = Math.round(lerpVal(15, 80, dayAmt));
+    const farG = Math.round(lerpVal(15, 90, dayAmt));
+    const farB = Math.round(lerpVal(30, 140, dayAmt));
+    for (let i = 0; i < farMtnProfile.length; i += 3) {
+      const p = farMtnProfile[i];
+      const h = p.y * H * 0.8;
+      if (h < 5) continue;
+      const sx = p.x * W + mx * W * 0.02;
+      const shimmer = Math.sin(t * 0.01 + p.x * 20) * 2;
+      const rh = Math.min(h * 0.3, reflH * 0.5);
+      px(sx + shimmer, reflY, PX * 2, rh, rgb(farR, farG, farB), reflAlpha * 0.7);
+    }
+
+    // bay hills reflection
+    const hillR = Math.round(lerpVal(10, 40, dayAmt));
+    const hillG = Math.round(lerpVal(18, 85, dayAmt));
+    const hillB = Math.round(lerpVal(10, 35, dayAmt));
+    for (const profile of [leftHillProfile, rightHillProfile]) {
+      for (let i = 0; i < profile.length; i += 4) {
+        const p = profile[i];
+        const h = p.y * H * 0.8;
+        if (h < 8) continue;
+        const sx = p.x * W + mx * W * 0.04;
+        const shimmer = Math.sin(t * 0.012 + p.x * 15) * 2;
+        const rh = Math.min(h * 0.25, reflH * 0.4);
+        px(sx + shimmer, reflY, PX * 2, rh, rgb(hillR, hillG, hillB), reflAlpha);
+      }
+    }
+
+    // city lights reflection at night
+    if (dayAmt < 0.4) {
+      const nightI = (0.4 - dayAmt) / 0.4;
+      for (const b of buildings) {
+        const bx = b.x * W + mx * W * 0.03;
+        const bw = b.wFrac * W;
+        const bh = b.hFrac * H;
+        if (bh < 15) continue;
+        const shimmer = Math.sin(t * 0.015 + b.x * 30) * 3;
+        // warm light streaks in water
+        const cols = Math.max(1, Math.floor(bw / 6));
+        for (let c = 0; c < cols; c++) {
+          const cx = bx + c * 6 + shimmer;
+          const streak = 8 + Math.sin(t * 0.008 + c * 2 + b.x * 50) * 4;
+          px(cx, reflY + 2, 2, streak, rgba(255, 210, 100, 0.04 * nightI));
+        }
+      }
+    }
+  }
+
+  // === SHOOTING STARS ===
+  const shootingStars = [];
+  let nextShootingStar = 300 + Math.random() * 600;
+
+  function updateShootingStars(starAlpha, t) {
+    if (starAlpha < 0.3) { shootingStars.length = 0; return; }
+
+    // spawn new one
+    if (t > nextShootingStar && shootingStars.length < 2) {
+      const angle = 0.3 + Math.random() * 0.5; // downward angle
+      const speed = 2.5 + Math.random() * 2;
+      shootingStars.push({
+        x: Math.random() * W * 0.8 + W * 0.1,
+        y: Math.random() * H * 0.15,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        len: 12 + Math.random() * 16
+      });
+      nextShootingStar = t + 800 + Math.random() * 1200;
+    }
+
+    for (let i = shootingStars.length - 1; i >= 0; i--) {
+      const s = shootingStars[i];
+      s.x += s.vx;
+      s.y += s.vy;
+      s.life -= 0.012;
+      if (s.life <= 0 || s.y > H * 0.5) { shootingStars.splice(i, 1); continue; }
+
+      // draw trail
+      const segments = 6;
+      for (let j = 0; j < segments; j++) {
+        const t2 = j / segments;
+        const tx = s.x - s.vx * t2 * s.len * 0.3;
+        const ty = s.y - s.vy * t2 * s.len * 0.3;
+        const a = s.life * starAlpha * (1 - t2) * 0.8;
+        const size = Math.max(1, 2 - j * 0.3);
+        px(tx, ty, size, size, rgba(240, 245, 255, a));
+      }
+      // bright head
+      px(s.x, s.y, 2, 2, rgba(255, 255, 255, s.life * starAlpha * 0.9));
+    }
   }
 
   // === SEAGULLS ===
@@ -1056,6 +1427,7 @@
     if (starAlpha > 0.2) {
       const moonX = W * 0.75 + mx * W * 0.02;
       const moonY = H * 0.12 + my * H * 0.02;
+      moonScreenX = moonX + 6; moonScreenY = moonY + 6;
       px(moonX, moonY, 12, 12, rgba(220, 220, 200, starAlpha * 0.7));
       px(moonX + 3, moonY + 2, 6, 6, rgba(200, 200, 180, starAlpha * 0.3));
       // moon glow
@@ -1079,6 +1451,12 @@
         }
       }
     }
+
+    // shooting stars (night only)
+    updateShootingStars(starAlpha, time);
+
+    // clouds (behind mountains)
+    drawClouds(dayAmount, mx, time);
 
     // === LANDSCAPE ===
     const seaY = H * 0.55;
@@ -1141,14 +1519,35 @@
     // lighter top edge (path/road)
     px(W * 0.21 + shoreOx, shoreTop, W * 0.58, 3, rgb(Math.min(255,shoreR+20), Math.min(255,shoreG+15), Math.min(255,shoreB+10)));
 
+    // shake wobble (mobile easter egg)
+    if (shakeOffset > 0.1) {
+      ctx.save();
+      ctx.translate(Math.sin(time * 0.8) * shakeOffset, Math.cos(time * 1.1) * shakeOffset * 0.5);
+      shakeOffset *= 0.95;
+    }
+
     // city on the shore — buildings sit on top of shore strip
     drawHouses(shoreTop, dayAmount, mx);
+
+    if (shakeOffset > 0.1) ctx.restore();
+
+    // waterfront lanterns (night only)
+    drawLanterns(shoreTop, dayAmount, mx);
 
     // sea
     drawSea(seaY, cyclePhase, time, mx);
 
+    // water reflections
+    drawWaterReflection(seaY, dayAmount, mx, time);
+
     // sailboat
     drawSailboat(seaY, cyclePhase, time, mx);
+
+    // UFO (easter egg)
+    drawUFO(time);
+
+    // firework show (easter egg)
+    drawFireworkShow(time);
 
     // seagulls (day only)
     if (dayAmount > 0.2) {
@@ -1195,8 +1594,16 @@
     if (daytime && !heroEl.classList.contains('daytime')) heroEl.classList.add('daytime');
     else if (!daytime && heroEl.classList.contains('daytime')) heroEl.classList.remove('daytime');
 
-    requestAnimationFrame(frame);
+    if (heroVisible) requestAnimationFrame(frame);
   }
+
+  let heroVisible = true;
+  const heroObs = new IntersectionObserver(([e]) => {
+    heroVisible = e.isIntersecting;
+    if (heroVisible) requestAnimationFrame(frame);
+  }, { threshold: 0 });
+  heroObs.observe(canvas);
+
   frame();
 
   window.addEventListener('resize', () => { resize(); });
