@@ -719,25 +719,11 @@
   const deliveryDrone = { x: 0.3, y: 0, active: false, targetX: 0.6, timer: 0 };
 
   // === NIGHT STATE ===
-  // Neon signs
+  // Neon signs (initialized after buildings — see below buildings.sort)
   const neonSigns = [];
   const neonPalette = ['#ff2d6b','#00d4ff','#39ff14','#bf00ff'];
-  const signRng = (function(s){return function(){s=(s*9301+49297)%233280;return s/233280;};})(777);
-  for (let i = 0; i < 10; i++) {
-    neonSigns.push({
-      bIdx: Math.floor(signRng() * buildings.length),
-      color: neonPalette[Math.floor(signRng() * 4)],
-      w: 8 + Math.floor(signRng() * 12),
-      h: 3 + Math.floor(signRng() * 3),
-      flickerPhase: signRng() * Math.PI * 2,
-      flickerSpeed: 0.05 + signRng() * 0.1,
-      activateAt: signRng(), // duskProgress threshold
-      active: false,
-      offDelay: signRng() * 0.3 // dawn persist delay
-    });
-  }
-  // Mysterious figure
-  const mystFigure = { bIdx: buildings.length - 1, visible: false, jumpY: 0, jumping: false, jumpVY: 0, targetBIdx: 0 };
+  // Mysterious figure (initialized after buildings — see below buildings.sort)
+  const mystFigure = { bIdx: 0, visible: false, jumpY: 0, jumping: false, jumpVY: 0, targetBIdx: 0 };
   // Neon motorcycle
   const neonMoto = { x: 0, dir: 1, active: false, trail: [] };
   // VHS glitch
@@ -923,6 +909,23 @@
     });
   }
   buildings.sort((a, b) => a.hFrac - b.hFrac); // draw shorter first
+
+  // Initialize neon signs and mysterious figure (depends on buildings)
+  const signRng = (function(s){return function(){s=(s*9301+49297)%233280;return s/233280;};})(777);
+  for (let i = 0; i < 10; i++) {
+    neonSigns.push({
+      bIdx: Math.floor(signRng() * buildings.length),
+      color: neonPalette[Math.floor(signRng() * 4)],
+      w: 8 + Math.floor(signRng() * 12),
+      h: 3 + Math.floor(signRng() * 3),
+      flickerPhase: signRng() * Math.PI * 2,
+      flickerSpeed: 0.05 + signRng() * 0.1,
+      activateAt: signRng(),
+      active: false,
+      offDelay: signRng() * 0.3
+    });
+  }
+  mystFigure.bIdx = buildings.length - 1;
 
   function drawHouses(seaY, dayAmt, mx) {
     const ox = mx * W * 0.03;
