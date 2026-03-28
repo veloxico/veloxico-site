@@ -20,6 +20,10 @@
       --dim: #444466;
       --card: #0c0c1e;
       --pixel: 4px;
+      --neon-pink: #ff2d6b;
+      --neon-blue: #00d4ff;
+      --neon-green: #39ff14;
+      --neon-violet: #bf00ff;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -423,6 +427,41 @@
     ::-webkit-scrollbar-thumb { background: #1a1a35; }
     ::-webkit-scrollbar-thumb:hover { background: var(--dim); }
 
+    /* Intensified CRT at night */
+    .hero.crt-intense::after {
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0,0,0,0.10) 0px,
+        rgba(0,0,0,0.10) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+    }
+
+    /* Matrix rain overlay */
+    #matrix-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 9999; pointer-events: none; opacity: 0;
+      transition: opacity 0.3s;
+      background: rgba(0,0,0,0.85);
+    }
+    #matrix-overlay.active { opacity: 1; }
+    #matrix-overlay canvas { width: 100%; height: 100%; }
+
+    /* Hack terminal overlay */
+    #hack-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 9998; display: none; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.92);
+      font-family: 'Press Start 2P', monospace;
+    }
+    #hack-overlay.active { display: flex; }
+    #hack-terminal {
+      color: var(--neon-green); font-size: clamp(0.4rem, 1vw, 0.6rem);
+      padding: 2rem; max-width: 600px; line-height: 2;
+      text-shadow: 0 0 10px rgba(57,255,20,0.5);
+    }
+
     @media (max-width: 600px) {
       .footer-grid { grid-template-columns: 1fr; }
     }
@@ -474,6 +513,9 @@
   </div>
   <p class="footer-copy">&copy; 2026 veloxico</p>
 </footer>
+
+<div id="matrix-overlay"><canvas id="matrix-canvas"></canvas></div>
+<div id="hack-overlay"><div id="hack-terminal"></div></div>
 
 <script>
 /* ===== INTERACTIVE PIXEL MEDITERRANEAN BAY ===== */
@@ -644,6 +686,74 @@
   let moonScreenX = 0, moonScreenY = 0;
   let rapidClicks = [], fireworkShow = false, fireworkTimer = 0;
   let shakeOffset = 0;
+
+  // === INFRASTRUCTURE ===
+  // FPS monitor
+  let lastFrameTime = performance.now(), deltaTime = 16, fpsAccum = 0, fpsCount = 0, avgFps = 60, lowPerf = false;
+  // Mobile detection
+  const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) || (window.innerWidth < 768);
+  // Global particle budget
+  let activeParticles = 0;
+  const MAX_PARTICLES = 200;
+  // Phase-derived vars (set in frame)
+  let nightIntensity = 0, duskProgress = 0, dawnProgress = 0;
+
+  // === OBJECT POOLS ===
+  function createPool(n) { const p = []; for (let i = 0; i < n; i++) p.push({ life: 0, x: 0, y: 0, vx: 0, vy: 0, extra: 0, extra2: 0, extra3: 0 }); return p; }
+  const carPool = createPool(isMobile ? 2 : 4);
+  const smokePool = createPool(isMobile ? 12 : 24);
+  const birdPool = createPool(isMobile ? 8 : 18);
+  const dolphinPool = createPool(3);
+  const butterflyPool = createPool(isMobile ? 3 : 6);
+  const planktonPool = createPool(isMobile ? 20 : 40);
+  const dronePool = createPool(3);
+  const steamPool = createPool(isMobile ? 12 : 24);
+
+  // === DAYTIME STATE ===
+  let flagWave = 0;
+  // Rain/rainbow state machine
+  let rainState = 'clear', rainTimer = 0, rainParticles = [], rainbowAlpha = 0;
+  // Hot air balloon
+  const balloon = { x: -0.1, y: 0.12, active: false, timer: 0 };
+  // Delivery drone
+  const deliveryDrone = { x: 0.3, y: 0, active: false, targetX: 0.6, timer: 0 };
+
+  // === NIGHT STATE ===
+  // Neon signs
+  const neonSigns = [];
+  const neonPalette = ['#ff2d6b','#00d4ff','#39ff14','#bf00ff'];
+  const signRng = (function(s){return function(){s=(s*9301+49297)%233280;return s/233280;};})(777);
+  for (let i = 0; i < 10; i++) {
+    neonSigns.push({
+      bIdx: Math.floor(signRng() * buildings.length),
+      color: neonPalette[Math.floor(signRng() * 4)],
+      w: 8 + Math.floor(signRng() * 12),
+      h: 3 + Math.floor(signRng() * 3),
+      flickerPhase: signRng() * Math.PI * 2,
+      flickerSpeed: 0.05 + signRng() * 0.1,
+      activateAt: signRng(), // duskProgress threshold
+      active: false,
+      offDelay: signRng() * 0.3 // dawn persist delay
+    });
+  }
+  // Mysterious figure
+  const mystFigure = { bIdx: buildings.length - 1, visible: false, jumpY: 0, jumping: false, jumpVY: 0, targetBIdx: 0 };
+  // Neon motorcycle
+  const neonMoto = { x: 0, dir: 1, active: false, trail: [] };
+  // VHS glitch
+  let vhsGlitchTimer = 0, vhsSlices = [];
+  // Dawn reboot glitch
+  let rebootGlitch = false, rebootTimer = 0;
+
+  // === EASTER EGG STATE (new) ===
+  let raveMode = false, raveTimer = 0;
+  let bioExplosion = false, bioExpX = 0, bioExpY = 0, bioExpTimer = 0;
+  let matrixRainActive = false, matrixTimer = 0;
+  let neonDragTrail = [], isDraggingNight = false;
+  let hackActive = false, hackTimer = 0;
+  let konamiSeq = [], konamiCode = [38,38,40,40,37,39,37,39,66,65];
+  let waterHoldTimer = 0, waterHoldActive = false;
+  let neonSignClicks = [], lastSignClickTime = 0;
 
   heroEl.addEventListener('click', e => {
     const rect = canvas.getBoundingClientRect();
@@ -1130,8 +1240,9 @@
       }
     }
 
-    // flag
-    const flagPhase = Math.sin(t * 0.08) * 2;
+    // flag (enhanced waving)
+    flagWave = Math.sin(t * 0.08);
+    const flagPhase = flagWave * 3;
     if (pirateMode) {
       // jolly roger flag
       const fw = 8 + flagPhase;
@@ -1373,8 +1484,820 @@
     });
   }
 
+  // === PIXEL CARS ON SHORE ROAD ===
+  function updateCars(shoreTop, mx, t, dayAmt) {
+    if (dayAmt < 0.25) return;
+    const ox = mx * W * 0.03;
+    const roadY = shoreTop + 1;
+    for (const c of carPool) {
+      if (c.life <= 0) {
+        if (Math.random() < 0.005 * dayAmt) {
+          c.life = 1; c.x = c.vx > 0 ? W * 0.20 : W * 0.80;
+          c.vx = (Math.random() > 0.5 ? 1 : -1) * (0.4 + Math.random() * 0.3);
+          c.x = c.vx > 0 ? W * 0.20 : W * 0.78;
+          // car color index
+          c.extra = Math.floor(Math.random() * 4);
+        }
+        continue;
+      }
+      c.x += c.vx;
+      if (c.x < W * 0.18 || c.x > W * 0.82) { c.life = 0; continue; }
+      const colors = [[180,40,40],[40,80,180],[60,160,60],[200,180,40]];
+      const cc = colors[c.extra % 4];
+      const cx = c.x + ox;
+      // car body 8x4
+      px(cx, roadY - 4, 8, 4, rgb(cc[0], cc[1], cc[2]), dayAmt * 0.8);
+      // windshield
+      px(cx + (c.vx > 0 ? 5 : 1), roadY - 3, 2, 2, rgba(150, 200, 240, dayAmt * 0.6));
+      // night: headlights
+      if (nightIntensity > 0.2) {
+        const hlx = c.vx > 0 ? cx + 8 : cx - 4;
+        px(hlx, roadY - 3, 4, 1, rgba(255, 255, 200, nightIntensity * 0.5));
+      }
+      activeParticles++;
+    }
+  }
+
+  // === CHIMNEY SMOKE ===
+  function updateSmoke(shoreTop, mx, dayAmt, t) {
+    if (dayAmt < 0.2) return;
+    const ox = mx * W * 0.03;
+    // spawn from tallest 3 buildings
+    const tallest = buildings.slice(-3);
+    for (const s of smokePool) {
+      if (s.life <= 0) {
+        if (Math.random() < 0.03 * dayAmt && activeParticles < MAX_PARTICLES) {
+          const b = tallest[Math.floor(Math.random() * 3)];
+          const bx = b.x * W + ox;
+          const bh = b.hFrac * H;
+          s.life = 1; s.x = bx + (b.wFrac * W) / 2;
+          s.y = shoreTop - bh - 4;
+          s.vx = (Math.random() - 0.5) * 0.2;
+          s.vy = -0.3 - Math.random() * 0.2;
+          s.extra = 2 + Math.floor(Math.random() * 3); // size
+        }
+        continue;
+      }
+      s.life -= 0.008; s.x += s.vx; s.y += s.vy;
+      s.vx += (Math.random() - 0.5) * 0.02;
+      const a = s.life * dayAmt * 0.3;
+      px(s.x, s.y, s.extra, s.extra, rgba(180, 180, 180, a));
+      activeParticles++;
+    }
+  }
+
+  // === WAVING FLAG (modify existing flag in drawSailboat — handled via flagWave) ===
+
+  // === GOD RAYS FROM SUN ===
+  function drawGodRays(cyclePhase, dayAmt) {
+    if (isMobile || dayAmt < 0.4) return;
+    const sunPhase = (cyclePhase - 0.28) / 0.5;
+    if (sunPhase < 0 || sunPhase > 1) return;
+    const sunX = W * (0.1 + sunPhase * 0.8);
+    const sunY = H * (0.25 - 0.18 * Math.sin(sunPhase * Math.PI));
+    ctx.save();
+    ctx.globalAlpha = 0.025 * dayAmt;
+    for (let i = 0; i < 4; i++) {
+      const angle = -0.3 + i * 0.2 + Math.sin(time * 0.005 + i) * 0.05;
+      const len = H * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(sunX, sunY);
+      ctx.lineTo(sunX + Math.cos(angle) * len - 15, sunY + Math.sin(angle + 1.2) * len);
+      ctx.lineTo(sunX + Math.cos(angle) * len + 15, sunY + Math.sin(angle + 1.2) * len);
+      ctx.closePath();
+      ctx.fillStyle = rgba(255, 240, 200, 1);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // === V-FORMATION BIRDS ===
+  let birdFormations = [];
+  function initBirdFormation() {
+    const count = 5 + Math.floor(Math.random() * 3);
+    const startX = Math.random() > 0.5 ? -0.1 : 1.1;
+    const dir = startX < 0 ? 1 : -1;
+    const birds = [];
+    for (let i = 0; i < count; i++) {
+      const row = Math.floor(i / 2) + 1;
+      const side = i % 2 === 0 ? -1 : 1;
+      birds.push({
+        offX: (i === 0 ? 0 : row * 12 * -dir) + (i === 0 ? 0 : side * row * 8),
+        offY: (i === 0 ? 0 : row * 6 * Math.abs(side)),
+        wingPhase: Math.random() * Math.PI * 2
+      });
+    }
+    birdFormations.push({ x: startX * W, y: H * (0.08 + Math.random() * 0.12), vx: dir * (0.5 + Math.random() * 0.3), birds });
+  }
+
+  function updateBirds(dayAmt, t) {
+    if (dayAmt < 0.2) { birdFormations = []; return; }
+    if (duskProgress > 0.3) return; // birds depart at dusk
+    // spawn new formation occasionally
+    if (birdFormations.length < (isMobile ? 1 : 2) && Math.random() < 0.002 * dayAmt) initBirdFormation();
+    for (let f = birdFormations.length - 1; f >= 0; f--) {
+      const form = birdFormations[f];
+      form.x += form.vx;
+      if (form.x < -W * 0.2 || form.x > W * 1.2) { birdFormations.splice(f, 1); continue; }
+      for (const b of form.birds) {
+        b.wingPhase += 0.08;
+        const bx = form.x + b.offX;
+        const by = form.y + b.offY + Math.sin(t * 0.01 + b.offX * 0.1) * 3;
+        const wing = Math.sin(b.wingPhase) * 3;
+        const c = Math.round(lerpVal(60, 50, dayAmt));
+        px(bx - 3, by - Math.abs(wing), 2, 1, rgb(c, c, c + 10), dayAmt * 0.7);
+        px(bx + 2, by - Math.abs(wing), 2, 1, rgb(c, c, c + 10), dayAmt * 0.7);
+        px(bx, by, 2, 1, rgb(c + 10, c + 10, c + 10), dayAmt * 0.8);
+        activeParticles++;
+      }
+    }
+  }
+
+  // === DOLPHINS ===
+  function updateDolphins(seaY, dayAmt, t) {
+    if (dayAmt < 0.25) return;
+    for (const d of dolphinPool) {
+      if (d.life <= 0) {
+        if (Math.random() < 0.002 && activeParticles < MAX_PARTICLES) {
+          d.life = 1; d.x = W * (0.25 + Math.random() * 0.5);
+          d.extra = 0; // arc phase
+          d.vx = (Math.random() > 0.5 ? 1 : -1) * 0.8;
+          d.extra2 = seaY; // base Y
+        }
+        continue;
+      }
+      d.extra += 0.025;
+      if (d.extra > Math.PI) { d.life = 0; continue; }
+      d.x += d.vx;
+      const arcH = 25;
+      const dy = -Math.sin(d.extra) * arcH;
+      const y = d.extra2 + dy;
+      // dolphin body (6x3 pixel art)
+      const gr = Math.round(lerpVal(40, 100, dayAmt));
+      px(d.x, y, 6, 3, rgb(gr, gr + 20, gr + 40), dayAmt * 0.8);
+      // tail
+      px(d.x - (d.vx > 0 ? 4 : -4), y + 1, 3, 2, rgb(gr, gr + 15, gr + 30), dayAmt * 0.6);
+      // splash when entering/exiting water
+      if (d.extra < 0.3 || d.extra > 2.8) {
+        for (let i = 0; i < 2; i++) {
+          px(d.x + Math.random() * 8 - 4, d.extra2 - Math.random() * 4, 2, 2, rgba(200, 230, 255, dayAmt * 0.3));
+        }
+      }
+      activeParticles++;
+    }
+  }
+
+  // === BUTTERFLIES ===
+  function updateButterflies(dayAmt, mx, t) {
+    if (dayAmt < 0.3) return;
+    for (const b of butterflyPool) {
+      if (b.life <= 0) {
+        if (Math.random() < 0.004 && activeParticles < MAX_PARTICLES) {
+          b.life = 1;
+          const side = Math.random() > 0.5;
+          b.x = side ? W * (0.02 + Math.random() * 0.18) : W * (0.78 + Math.random() * 0.18);
+          b.y = H * (0.35 + Math.random() * 0.15);
+          b.vx = (Math.random() - 0.5) * 0.5;
+          b.vy = (Math.random() - 0.5) * 0.3;
+          b.extra = Math.random() * Math.PI * 2; // wing phase
+          b.extra2 = Math.floor(Math.random() * 4); // color idx
+        }
+        continue;
+      }
+      b.life -= 0.002;
+      b.extra += 0.15;
+      b.vx += (Math.random() - 0.5) * 0.15;
+      b.vy += (Math.random() - 0.5) * 0.1;
+      b.vx *= 0.95; b.vy *= 0.95;
+      b.x += b.vx; b.y += b.vy;
+      if (b.x < 0 || b.x > W || b.y < 0 || b.y > H) { b.life = 0; continue; }
+      const wing = Math.abs(Math.sin(b.extra));
+      const colors = ['#ff8844','#ffdd44','#88ccff','#ff88cc'];
+      const col = colors[b.extra2 % 4];
+      px(b.x - wing * 3, b.y, wing * 2, 2, col, dayAmt * 0.6);
+      px(b.x + 1, b.y, wing * 2, 2, col, dayAmt * 0.6);
+      px(b.x, b.y, 1, 2, rgb(40, 30, 20), dayAmt * 0.7);
+      activeParticles++;
+    }
+  }
+
+  // === RAIN + RAINBOW STATE MACHINE ===
+  function updateRainRainbow(seaY, dayAmt, t) {
+    if (dayAmt < 0.3) { rainState = 'clear'; return; }
+    switch (rainState) {
+      case 'clear':
+        if (Math.random() < 0.0002) { rainState = 'rain'; rainTimer = 300; } // 5s at 60fps
+        break;
+      case 'rain':
+        rainTimer--;
+        // spawn rain drops
+        if (!isMobile && activeParticles < MAX_PARTICLES) {
+          for (let i = 0; i < 3; i++) {
+            rainParticles.push({ x: Math.random() * W, y: -4, vy: 3 + Math.random() * 2, life: 1 });
+          }
+        }
+        if (rainTimer <= 0) { rainState = 'rainbow'; rainTimer = 180; rainbowAlpha = 0; }
+        break;
+      case 'rainbow':
+        rainTimer--;
+        rainbowAlpha = rainTimer > 90 ? Math.min(1, rainbowAlpha + 0.02) : Math.max(0, rainbowAlpha - 0.015);
+        if (rainTimer <= 0) { rainState = 'clear'; rainbowAlpha = 0; }
+        break;
+    }
+    // draw rain
+    for (let i = rainParticles.length - 1; i >= 0; i--) {
+      const r = rainParticles[i];
+      r.y += r.vy; r.life -= 0.01;
+      if (r.y > seaY || r.life <= 0) { rainParticles.splice(i, 1); continue; }
+      px(r.x, r.y, 1, 4, rgba(180, 200, 220, dayAmt * 0.3));
+      activeParticles++;
+    }
+    if (rainParticles.length > 60) rainParticles.splice(0, rainParticles.length - 60);
+    // draw rainbow
+    if (rainbowAlpha > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = rainbowAlpha * 0.12 * dayAmt;
+      const rcx = W * 0.5, rcy = seaY;
+      const rainbowColors = ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#4400ff','#8800ff'];
+      for (let i = 0; i < 7; i++) {
+        ctx.beginPath();
+        ctx.arc(rcx, rcy, 120 + i * 6, Math.PI, 0);
+        ctx.strokeStyle = rainbowColors[i];
+        ctx.lineWidth = 4;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  // === HOT AIR BALLOON ===
+  function updateBalloon(dayAmt, t) {
+    if (dayAmt < 0.3) { balloon.active = false; return; }
+    if (!balloon.active) {
+      balloon.timer--;
+      if (balloon.timer <= 0 && Math.random() < 0.001) {
+        balloon.active = true; balloon.x = -0.05; balloon.y = 0.08 + Math.random() * 0.06;
+      }
+      return;
+    }
+    balloon.x += 0.0003;
+    if (balloon.x > 1.1) { balloon.active = false; balloon.timer = 600; return; }
+    const bx = balloon.x * W, by = balloon.y * H + Math.sin(time * 0.01) * 3;
+    // envelope (16x20)
+    px(bx - 6, by - 16, 12, 14, rgba(220, 60, 60, dayAmt * 0.8));
+    px(bx - 4, by - 18, 8, 4, rgba(240, 80, 60, dayAmt * 0.7));
+    // stripes
+    px(bx - 5, by - 12, 10, 3, rgba(255, 220, 60, dayAmt * 0.6));
+    // basket
+    px(bx - 3, by, 6, 4, rgba(140, 100, 50, dayAmt * 0.7));
+    // ropes
+    px(bx - 4, by - 2, 1, 3, rgba(100, 80, 40, dayAmt * 0.4));
+    px(bx + 3, by - 2, 1, 3, rgba(100, 80, 40, dayAmt * 0.4));
+    activeParticles++;
+  }
+
+  // === NEON BUILDING OUTLINES ===
+  function drawNeonOutlines(shoreTop, mx) {
+    if (nightIntensity <= 0) return;
+    const ox = mx * W * 0.03;
+    const snap = v => Math.round(v / PX) * PX || PX;
+    for (let i = 0; i < buildings.length; i++) {
+      const b = buildings[i];
+      const bw = snap(b.wFrac * W);
+      const bh = snap(b.hFrac * H);
+      const bx = Math.floor(b.x * W + ox);
+      const by = Math.floor(shoreTop - bh);
+      const col = neonPalette[i % 4];
+      const a = nightIntensity * 0.25;
+      // outline
+      px(bx, by, bw, 1, col, a);
+      px(bx, by, 1, bh, col, a * 0.7);
+      px(bx + bw - 1, by, 1, bh, col, a * 0.7);
+      px(bx, by + bh - 1, bw, 1, col, a * 0.5);
+    }
+  }
+
+  // === NEON SIGNS ===
+  function drawNeonSignsFunc(shoreTop, mx, t) {
+    if (nightIntensity <= 0.05) return;
+    const ox = mx * W * 0.03;
+    const snap = v => Math.round(v / PX) * PX || PX;
+    for (const s of neonSigns) {
+      // activation logic (dusk transition)
+      if (duskProgress > 0 && duskProgress >= s.activateAt) s.active = true;
+      if (dawnProgress > 0 && dawnProgress >= (1 - s.offDelay)) {
+        // flicker off
+        if (Math.random() < 0.02) s.active = false;
+      }
+      if (nightIntensity > 0.8) s.active = true;
+      if (nightIntensity <= 0.05) s.active = false;
+      if (!s.active) continue;
+      const b = buildings[s.bIdx];
+      if (!b) continue;
+      const bw = snap(b.wFrac * W);
+      const bh = snap(b.hFrac * H);
+      const bx = Math.floor(b.x * W + ox);
+      const by = Math.floor(shoreTop - bh);
+      // flicker
+      const flicker = Math.sin(t * s.flickerSpeed + s.flickerPhase);
+      const raveMultiplier = raveMode ? 4 : 1;
+      const flickerA = flicker > (raveMode ? -0.8 : -0.2) ? 1 : 0.2;
+      if (raveMode) s.flickerPhase += 0.3;
+      const a = nightIntensity * flickerA * 0.8;
+      const sx = bx + 2, sy = by + Math.floor(bh * 0.3);
+      px(sx, sy, Math.min(s.w, bw - 4), s.h, s.color, a);
+      // glow
+      if (a > 0.4) {
+        const gSize = s.w + 4;
+        px(sx - 2, sy - 1, gSize, s.h + 2, s.color, a * 0.08);
+      }
+    }
+  }
+
+  // === LED STRIPS ===
+  function drawLEDStrips(shoreTop, mx, t) {
+    if (nightIntensity <= 0.2) return;
+    const ox = mx * W * 0.03;
+    const snap = v => Math.round(v / PX) * PX || PX;
+    const tallBuildings = buildings.slice(-5);
+    for (let i = 0; i < tallBuildings.length; i++) {
+      const b = tallBuildings[i];
+      const bw = snap(b.wFrac * W);
+      const bh = snap(b.hFrac * H);
+      const bx = Math.floor(b.x * W + ox);
+      const by = Math.floor(shoreTop - bh);
+      const col = neonPalette[(i + 1) % 4];
+      // vertical scrolling LED strip
+      const stripX = bx + bw - 2;
+      for (let y = 0; y < bh; y += 4) {
+        const scrollY = (y + t * 0.5) % bh;
+        const bright = (Math.floor(scrollY / 4) % 3 === 0) ? 1 : 0.2;
+        px(stripX, by + y, 1, 3, col, nightIntensity * bright * 0.5);
+      }
+    }
+  }
+
+  // === BIOLUMINESCENT PLANKTON ===
+  function updatePlankton(seaY, t) {
+    if (nightIntensity <= 0.2) return;
+    for (const p of planktonPool) {
+      if (p.life <= 0) {
+        if (Math.random() < 0.05 && activeParticles < MAX_PARTICLES) {
+          p.life = 1; p.x = W * (0.2 + Math.random() * 0.6);
+          p.y = seaY + 5 + Math.random() * (H - seaY - 20);
+          p.extra = Math.random() * Math.PI * 2; // phase
+        }
+        continue;
+      }
+      p.life -= 0.003;
+      p.extra += 0.02;
+      p.x += Math.sin(p.extra) * 0.2;
+      p.y += Math.cos(p.extra * 0.7) * 0.1;
+      const pulse = (Math.sin(p.extra * 2) * 0.5 + 0.5);
+      const a = nightIntensity * p.life * pulse * 0.6;
+      px(p.x, p.y, 2, 2, rgba(0, 255, 180, a));
+      activeParticles++;
+    }
+    // Bio explosion easter egg
+    if (bioExplosion) {
+      bioExpTimer--;
+      if (bioExpTimer <= 0) { bioExplosion = false; return; }
+      const progress = 1 - bioExpTimer / 120;
+      const radius = progress * 80;
+      for (let angle = 0; angle < Math.PI * 2; angle += 0.2) {
+        const ex = bioExpX + Math.cos(angle) * radius + (Math.random() - 0.5) * 8;
+        const ey = bioExpY + Math.sin(angle) * radius * 0.5 + (Math.random() - 0.5) * 4;
+        if (ey > seaY) {
+          px(ex, ey, 2, 2, rgba(0, 255, 180, (1 - progress) * nightIntensity * 0.7));
+        }
+      }
+    }
+  }
+
+  // === NEON BUOYS ===
+  function drawNeonBuoys(seaY, t) {
+    if (nightIntensity <= 0.2) return;
+    const positions = [0.28, 0.50, 0.72];
+    for (let i = 0; i < 3; i++) {
+      const bx = W * positions[i];
+      const by = seaY + 8 + Math.sin(t * 0.02 + i * 2) * 2;
+      const pulse = Math.sin(t * 0.04 + i * 1.5) * 0.5 + 0.5;
+      const col = neonPalette[i % 4];
+      px(bx - 2, by, 4, 3, col, nightIntensity * (0.3 + pulse * 0.5));
+      // glow on water
+      px(bx - 4, by + 3, 8, 2, col, nightIntensity * pulse * 0.1);
+    }
+  }
+
+  // === DIGITAL GRID SKY OVERLAY ===
+  function drawDigitalGrid(dayAmt, t) {
+    if (isMobile || nightIntensity <= 0.4) return;
+    ctx.save();
+    ctx.globalAlpha = nightIntensity * 0.04;
+    ctx.strokeStyle = rgba(0, 200, 255, 1);
+    ctx.lineWidth = 0.5;
+    const gridSize = 40;
+    for (let x = (t * 0.2) % gridSize; x < W; x += gridSize) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H * 0.45); ctx.stroke();
+    }
+    for (let y = 0; y < H * 0.45; y += gridSize) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // === VHS GLITCH ===
+  function drawVHSGlitch() {
+    if (isMobile || nightIntensity <= 0.3) return;
+    if (vhsGlitchTimer <= 0) {
+      if (Math.random() < 0.003 * nightIntensity) {
+        vhsGlitchTimer = 6;
+        vhsSlices = [];
+        const count = 2 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < count; i++) {
+          vhsSlices.push({
+            y: Math.floor(Math.random() * H),
+            h: 2 + Math.floor(Math.random() * 6),
+            offset: (Math.random() - 0.5) * 12
+          });
+        }
+      }
+      return;
+    }
+    vhsGlitchTimer--;
+    // Draw glitch by offsetting horizontal slices
+    for (const s of vhsSlices) {
+      const imgData = ctx.getImageData(0, s.y, W, s.h);
+      ctx.putImageData(imgData, s.offset, s.y);
+    }
+  }
+
+  // === PATROL DRONES ===
+  function updatePatrolDrones(dayAmt, t) {
+    if (nightIntensity <= 0.3) return;
+    for (const d of dronePool) {
+      if (d.life <= 0) {
+        if (Math.random() < 0.002 && duskProgress > 0.5 && activeParticles < MAX_PARTICLES) {
+          d.life = 1; d.x = Math.random() * W;
+          d.y = H * (0.06 + Math.random() * 0.15);
+          d.vx = (Math.random() - 0.5) * 1.2;
+          d.vy = 0;
+          d.extra = Math.random() * Math.PI * 2; // zigzag phase
+        }
+        continue;
+      }
+      d.life -= 0.001;
+      d.extra += 0.03;
+      d.x += d.vx;
+      d.y += Math.sin(d.extra) * 0.3;
+      if (d.x < -20 || d.x > W + 20) { d.life = 0; continue; }
+      // drone body
+      px(d.x - 3, d.y, 6, 2, rgba(60, 60, 80, nightIntensity * 0.8));
+      // blinking lights
+      const blink = Math.sin(t * 0.15 + d.x) > 0;
+      px(d.x - 2, d.y + 2, 2, 1, rgba(255, 0, 0, blink ? nightIntensity * 0.8 : 0.1));
+      px(d.x + 1, d.y + 2, 2, 1, rgba(0, 200, 255, blink ? 0.1 : nightIntensity * 0.8));
+      // searchlight cone
+      if (Math.sin(t * 0.02 + d.x * 0.1) > 0.5) {
+        ctx.save();
+        ctx.globalAlpha = nightIntensity * 0.03;
+        ctx.beginPath();
+        ctx.moveTo(d.x - 1, d.y + 3);
+        ctx.lineTo(d.x + 1, d.y + 3);
+        ctx.lineTo(d.x + 8, d.y + 40);
+        ctx.lineTo(d.x - 8, d.y + 40);
+        ctx.closePath();
+        ctx.fillStyle = '#00d4ff';
+        ctx.fill();
+        ctx.restore();
+      }
+      activeParticles++;
+    }
+  }
+
+  // === STEAM VENTS ===
+  function updateSteamVents(shoreTop, mx, t) {
+    if (nightIntensity <= 0.2) return;
+    const ox = mx * W * 0.03;
+    for (const s of steamPool) {
+      if (s.life <= 0) {
+        if (Math.random() < 0.02 * nightIntensity && activeParticles < MAX_PARTICLES) {
+          // spawn between buildings
+          const bIdx = Math.floor(Math.random() * (buildings.length - 1));
+          const b1 = buildings[bIdx], b2 = buildings[bIdx + 1];
+          s.life = 1;
+          s.x = ((b1.x + b2.x) / 2) * W + ox;
+          s.y = shoreTop - 2;
+          s.vy = -0.4 - Math.random() * 0.3;
+          s.vx = (Math.random() - 0.5) * 0.3;
+          s.extra = 2 + Math.floor(Math.random() * 2); // size
+        }
+        continue;
+      }
+      s.life -= 0.012; s.y += s.vy; s.x += s.vx;
+      s.vx += (Math.random() - 0.5) * 0.05;
+      const a = s.life * nightIntensity * 0.2;
+      px(s.x, s.y, s.extra, s.extra, rgba(200, 200, 220, a));
+      activeParticles++;
+    }
+  }
+
+  // === MYSTERIOUS FIGURE ===
+  function drawMysteriousFigure(shoreTop, mx) {
+    if (nightIntensity <= 0.4) { mystFigure.visible = false; return; }
+    if (!mystFigure.visible && Math.random() < 0.0005 * nightIntensity) mystFigure.visible = true;
+    if (!mystFigure.visible && !mystFigure.jumping) return;
+    const ox = mx * W * 0.03;
+    const snap = v => Math.round(v / PX) * PX || PX;
+    const b = buildings[mystFigure.bIdx];
+    if (!b) return;
+    const bw = snap(b.wFrac * W);
+    const bh = snap(b.hFrac * H);
+    const bx = Math.floor(b.x * W + ox);
+    const by = Math.floor(shoreTop - bh);
+    let fx = bx + bw / 2 - 2, fy = by - 8;
+    // jumping animation
+    if (mystFigure.jumping) {
+      mystFigure.jumpVY += 0.15;
+      mystFigure.jumpY += mystFigure.jumpVY;
+      const tb = buildings[mystFigure.targetBIdx];
+      if (tb) {
+        const tbh = snap(tb.hFrac * H);
+        const targetY = shoreTop - tbh - 8;
+        fx = lerpVal(bx + bw/2 - 2, Math.floor(tb.x * W + ox) + snap(tb.wFrac * W)/2 - 2, Math.min(1, mystFigure.jumpY / 40));
+        fy = by - 8 + mystFigure.jumpY + mystFigure.jumpVY * -2;
+        if (fy >= targetY && mystFigure.jumpVY > 0) {
+          mystFigure.jumping = false;
+          mystFigure.bIdx = mystFigure.targetBIdx;
+          mystFigure.jumpY = 0;
+        }
+      }
+    }
+    // silhouette (4x8)
+    px(fx, fy, 4, 2, rgba(10, 10, 15, nightIntensity * 0.9)); // head
+    px(fx - 1, fy + 2, 6, 4, rgba(10, 10, 15, nightIntensity * 0.85)); // body
+    px(fx, fy + 6, 2, 2, rgba(10, 10, 15, nightIntensity * 0.8)); // legs
+    px(fx + 2, fy + 6, 2, 2, rgba(10, 10, 15, nightIntensity * 0.8));
+    // glowing eyes
+    px(fx + 1, fy + 1, 1, 1, rgba(255, 0, 0, nightIntensity * 0.7 * (Math.sin(time * 0.05) * 0.3 + 0.7)));
+    // store screen position for click detection
+    mystFigure.screenX = fx; mystFigure.screenY = fy;
+  }
+
+  // === NEON AURORA ===
+  function drawNeonAurora(t) {
+    if (nightIntensity <= 0.3) return;
+    ctx.save();
+    const y = H * 0.04;
+    for (let i = 0; i < 3; i++) {
+      const grad = ctx.createLinearGradient(0, y + i * 8, W, y + i * 8);
+      const colors = [neonPalette[0], neonPalette[1], neonPalette[3], neonPalette[2]];
+      const shift = (t * 0.001 + i * 0.3) % 1;
+      for (let j = 0; j < 4; j++) {
+        grad.addColorStop(((j / 4) + shift) % 1, colors[j]);
+      }
+      ctx.globalAlpha = nightIntensity * 0.04;
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, y + i * 6, W, 5);
+    }
+    ctx.restore();
+  }
+
+  // === NEON MOTORCYCLE ===
+  function updateNeonMotorcycle(shoreTop, mx, t) {
+    if (nightIntensity <= 0.3) { neonMoto.active = false; return; }
+    const ox = mx * W * 0.03;
+    const roadY = shoreTop + 1;
+    if (!neonMoto.active) {
+      if (Math.random() < 0.001 * nightIntensity) {
+        neonMoto.active = true;
+        neonMoto.dir = Math.random() > 0.5 ? 1 : -1;
+        neonMoto.x = neonMoto.dir > 0 ? W * 0.20 : W * 0.80;
+        neonMoto.trail = [];
+      }
+      return;
+    }
+    neonMoto.x += neonMoto.dir * 1.2;
+    if (neonMoto.x < W * 0.18 || neonMoto.x > W * 0.82) { neonMoto.active = false; return; }
+    const mx2 = neonMoto.x + ox;
+    // body (6x4)
+    px(mx2, roadY - 5, 6, 3, rgba(30, 30, 40, nightIntensity * 0.9));
+    // neon underglow
+    px(mx2 - 1, roadY - 2, 8, 1, '#ff2d6b', nightIntensity * 0.7);
+    // trail
+    neonMoto.trail.push({ x: mx2, y: roadY - 2 });
+    if (neonMoto.trail.length > 8) neonMoto.trail.shift();
+    for (let i = 0; i < neonMoto.trail.length; i++) {
+      const tp = neonMoto.trail[i];
+      const a = (i / neonMoto.trail.length) * nightIntensity * 0.4;
+      px(tp.x, tp.y, 3, 1, '#ff2d6b', a);
+    }
+    activeParticles++;
+  }
+
+  // === DAWN REBOOT GLITCH ===
+  function drawRebootGlitch() {
+    if (!rebootGlitch) return;
+    rebootTimer--;
+    if (rebootTimer <= 0) { rebootGlitch = false; return; }
+    // full screen glitch effect
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, W, H);
+    // glitch lines
+    for (let i = 0; i < 5; i++) {
+      const y = Math.random() * H;
+      ctx.fillStyle = neonPalette[Math.floor(Math.random() * 4)];
+      ctx.fillRect(0, y, W, 2);
+    }
+    ctx.restore();
+  }
+
+  // === KONAMI CODE MATRIX RAIN ===
+  let matrixColumns = [];
+  function initMatrix() {
+    const mc = document.getElementById('matrix-canvas');
+    mc.width = window.innerWidth; mc.height = window.innerHeight;
+    matrixColumns = [];
+    const cols = Math.floor(mc.width / 14);
+    for (let i = 0; i < cols; i++) {
+      matrixColumns.push({ x: i * 14, y: Math.random() * -mc.height, speed: 2 + Math.random() * 4, chars: [] });
+      for (let j = 0; j < 30; j++) matrixColumns[i].chars.push(String.fromCharCode(0x30A0 + Math.random() * 96));
+    }
+  }
+  function drawMatrix() {
+    if (!matrixRainActive) return;
+    matrixTimer--;
+    if (matrixTimer <= 0) { matrixRainActive = false; document.getElementById('matrix-overlay').classList.remove('active'); return; }
+    const mc = document.getElementById('matrix-canvas');
+    const mctx = mc.getContext('2d');
+    mctx.fillStyle = 'rgba(0,0,0,0.05)';
+    mctx.fillRect(0, 0, mc.width, mc.height);
+    mctx.font = '12px monospace';
+    for (const col of matrixColumns) {
+      col.y += col.speed;
+      if (col.y > mc.height + 400) col.y = Math.random() * -200;
+      for (let j = 0; j < col.chars.length; j++) {
+        const cy = col.y + j * 14;
+        if (cy < 0 || cy > mc.height) continue;
+        const fade = j === 0 ? 1 : Math.max(0.1, 1 - j * 0.05);
+        mctx.fillStyle = j === 0 ? '#fff' : `rgba(57,255,20,${fade})`;
+        if (Math.random() < 0.02) col.chars[j] = String.fromCharCode(0x30A0 + Math.random() * 96);
+        mctx.fillText(col.chars[j], col.x, cy);
+      }
+    }
+  }
+
+  // === HACK TERMINAL ===
+  const hackLines = [
+    '> INITIALIZING BREACH PROTOCOL...',
+    '> SCANNING PORTS 1-65535...',
+    '> FOUND: SSH(22) HTTP(80) HTTPS(443)',
+    '> BYPASSING FIREWALL...',
+    '> INJECTING PAYLOAD...',
+    '> DECRYPTING DATABASE...',
+    '> [████████████████████] 100%',
+    '',
+    '> ACCESS GRANTED',
+    '> WELCOME, HACKER.'
+  ];
+  let hackLineIdx = 0, hackCharIdx = 0, hackText = '';
+  function updateHackTerminal() {
+    if (!hackActive) return;
+    hackTimer--;
+    if (hackTimer <= 0) {
+      hackActive = false;
+      document.getElementById('hack-overlay').classList.remove('active');
+      hackLineIdx = 0; hackCharIdx = 0; hackText = '';
+      return;
+    }
+    if (hackLineIdx < hackLines.length) {
+      const line = hackLines[hackLineIdx];
+      if (hackCharIdx < line.length) {
+        hackText += line[hackCharIdx];
+        hackCharIdx++;
+      } else {
+        hackText += '\n';
+        hackLineIdx++;
+        hackCharIdx = 0;
+      }
+      document.getElementById('hack-terminal').textContent = hackText + '█';
+    }
+  }
+
+  // === NEON DRAG TRAILS (easter egg) ===
+  function drawNeonDragTrails() {
+    for (let i = neonDragTrail.length - 1; i >= 0; i--) {
+      const p = neonDragTrail[i];
+      p.life--;
+      if (p.life <= 0) { neonDragTrail.splice(i, 1); continue; }
+      const a = (p.life / 60) * nightIntensity * 0.6;
+      px(p.x, p.y, 3, 3, p.color, a);
+    }
+  }
+
+  // === EASTER EGG EVENT LISTENERS ===
+  // Konami code
+  document.addEventListener('keydown', e => {
+    konamiSeq.push(e.keyCode);
+    if (konamiSeq.length > 10) konamiSeq.shift();
+    if (konamiSeq.length === 10 && konamiSeq.every((k, i) => k === konamiCode[i])) {
+      konamiSeq = [];
+      matrixRainActive = true;
+      matrixTimer = 600; // 10s
+      initMatrix();
+      document.getElementById('matrix-overlay').classList.add('active');
+    }
+  });
+
+  // Type "hack"
+  let hackBuffer = '';
+  document.addEventListener('keypress', e => {
+    hackBuffer += e.key.toLowerCase();
+    if (hackBuffer.length > 10) hackBuffer = hackBuffer.slice(-10);
+    if (hackBuffer.endsWith('hack') && !hackActive) {
+      hackActive = true;
+      hackTimer = 480; // 8s
+      hackText = ''; hackLineIdx = 0; hackCharIdx = 0;
+      document.getElementById('hack-overlay').classList.add('active');
+    }
+  });
+
+  // Water hold for bioluminescent explosion
+  let waterMouseDown = false, waterMouseDownTime = 0;
+  heroEl.addEventListener('mousedown', e => {
+    const rect = canvas.getBoundingClientRect();
+    const cy = (e.clientY - rect.top) / rect.height;
+    if (cy > 0.55 && nightIntensity > 0.3) {
+      waterMouseDown = true;
+      waterMouseDownTime = performance.now();
+      waterHoldActive = true;
+    }
+  });
+  heroEl.addEventListener('mouseup', e => {
+    if (waterHoldActive && waterMouseDown) {
+      const held = performance.now() - waterMouseDownTime;
+      if (held > 3000 && nightIntensity > 0.3) {
+        const rect = canvas.getBoundingClientRect();
+        bioExplosion = true;
+        bioExpX = e.clientX - rect.left;
+        bioExpY = e.clientY - rect.top;
+        bioExpTimer = 120;
+      }
+    }
+    waterMouseDown = false; waterHoldActive = false;
+  });
+
+  // Click mysterious figure → jump
+  heroEl.addEventListener('click', e => {
+    if (!mystFigure.visible || mystFigure.jumping || nightIntensity <= 0.4) return;
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+    if (mystFigure.screenX && Math.abs(cx - mystFigure.screenX) < 15 && Math.abs(cy - mystFigure.screenY) < 15) {
+      mystFigure.jumping = true;
+      mystFigure.jumpVY = -4;
+      mystFigure.jumpY = 0;
+      // pick a different building
+      let newIdx = mystFigure.bIdx;
+      while (newIdx === mystFigure.bIdx) newIdx = buildings.length - 1 - Math.floor(Math.random() * 4);
+      mystFigure.targetBIdx = newIdx;
+    }
+  });
+
+  // Triple-click neon sign → rave mode
+  heroEl.addEventListener('click', e => {
+    if (nightIntensity <= 0.3 || raveMode) return;
+    const now = performance.now();
+    neonSignClicks.push(now);
+    neonSignClicks = neonSignClicks.filter(t => now - t < 800);
+    if (neonSignClicks.length >= 3) {
+      raveMode = true; raveTimer = 300; // 5s
+      neonSignClicks = [];
+    }
+  });
+
+  // Drag sky at night → neon trails
+  heroEl.addEventListener('mousemove', e => {
+    if (nightIntensity <= 0.2 || e.buttons !== 1) return;
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+    if (cy < H * 0.45 && neonDragTrail.length < 20) {
+      neonDragTrail.push({ x: cx, y: cy, life: 60, color: neonPalette[Math.floor(Math.random() * 4)] });
+    }
+  });
+
   // === MAIN LOOP ===
   function frame() {
+    // FPS monitoring
+    const now = performance.now();
+    deltaTime = now - lastFrameTime;
+    lastFrameTime = now;
+    fpsAccum += 1000 / Math.max(1, deltaTime);
+    fpsCount++;
+    if (fpsCount >= 30) { avgFps = fpsAccum / fpsCount; fpsAccum = 0; fpsCount = 0; lowPerf = avgFps < 30; }
+    activeParticles = 0; // reset budget each frame
+
     time++;
     ctx.clearRect(0, 0, W, H);
 
@@ -1385,6 +2308,23 @@
     const starAlpha = cyclePhase < 0.25 || cyclePhase > 0.8 ? 1 : cyclePhase < 0.4 ? Math.max(0, 1-(cyclePhase-0.25)/0.15) : cyclePhase > 0.65 ? Math.min(1,(cyclePhase-0.65)/0.15) : 0;
     const mx = (mouseX - 0.5);
     const my = (mouseY - 0.5);
+
+    // Derived phase vars
+    nightIntensity = Math.max(0, (0.4 - dayAmount) / 0.4);
+    duskProgress = cyclePhase >= 0.65 && cyclePhase <= 0.80 ? Math.min(1, (cyclePhase - 0.65) / 0.15) : 0;
+    dawnProgress = cyclePhase >= 0.25 && cyclePhase <= 0.35 ? Math.min(1, (cyclePhase - 0.25) / 0.10) : 0;
+
+    // Rave mode timer
+    if (raveMode) { raveTimer--; if (raveTimer <= 0) raveMode = false; }
+
+    // CRT intensity toggle
+    if (nightIntensity > 0.5 && !heroEl.classList.contains('crt-intense')) heroEl.classList.add('crt-intense');
+    else if (nightIntensity <= 0.5 && heroEl.classList.contains('crt-intense')) heroEl.classList.remove('crt-intense');
+
+    // Dawn reboot glitch trigger
+    if (dawnProgress > 0.9 && dawnProgress < 0.98 && !rebootGlitch && Math.random() < 0.01) {
+      rebootGlitch = true; rebootTimer = 8;
+    }
 
     // sky gradient
     const grad = ctx.createLinearGradient(0, 0, 0, H * 0.65);
@@ -1452,11 +2392,26 @@
       }
     }
 
+    // digital grid sky overlay (night)
+    drawDigitalGrid(dayAmount, time);
+
+    // neon aurora above city (night)
+    drawNeonAurora(time);
+
     // shooting stars (night only)
     updateShootingStars(starAlpha, time);
 
     // clouds (behind mountains)
     drawClouds(dayAmount, mx, time);
+
+    // god rays from sun (day)
+    drawGodRays(cyclePhase, dayAmount);
+
+    // hot air balloon (day)
+    updateBalloon(dayAmount, time);
+
+    // V-formation birds (day)
+    updateBirds(dayAmount, time);
 
     // === LANDSCAPE ===
     const seaY = H * 0.55;
@@ -1508,6 +2463,9 @@
       drawTree(tx, ty, tr.size, tr.type, dayAmount);
     }
 
+    // butterflies near hills (day)
+    updateButterflies(dayAmount, mx, time);
+
     // ground/shore strip — wide enough so buildings sit fully on land
     const shoreTop = seaY - 6;
     const shoreH = 30;
@@ -1531,14 +2489,44 @@
 
     if (shakeOffset > 0.1) ctx.restore();
 
+    // neon building outlines (night)
+    drawNeonOutlines(shoreTop, mx);
+
+    // neon signs (night)
+    drawNeonSignsFunc(shoreTop, mx, time);
+
+    // LED strips (night)
+    drawLEDStrips(shoreTop, mx, time);
+
+    // chimney smoke (day)
+    updateSmoke(shoreTop, mx, dayAmount, time);
+
+    // mysterious figure (night)
+    drawMysteriousFigure(shoreTop, mx);
+
     // waterfront lanterns (night only)
     drawLanterns(shoreTop, dayAmount, mx);
+
+    // steam vents (night)
+    updateSteamVents(shoreTop, mx, time);
 
     // sea
     drawSea(seaY, cyclePhase, time, mx);
 
     // water reflections
     drawWaterReflection(seaY, dayAmount, mx, time);
+
+    // bioluminescent plankton (night)
+    updatePlankton(seaY, time);
+
+    // neon buoys (night)
+    drawNeonBuoys(seaY, time);
+
+    // dolphins (day)
+    updateDolphins(seaY, dayAmount, time);
+
+    // rain + rainbow (day)
+    updateRainRainbow(seaY, dayAmount, time);
 
     // sailboat
     drawSailboat(seaY, cyclePhase, time, mx);
@@ -1563,6 +2551,30 @@
         px(gx, gy, 2, 1, rgb(gc,gc,gc), dayAmount * 0.7);
       }
     }
+
+    // pixel cars on road (day)
+    updateCars(shoreTop, mx, time, dayAmount);
+
+    // neon motorcycle (night)
+    updateNeonMotorcycle(shoreTop, mx, time);
+
+    // patrol drones (night)
+    updatePatrolDrones(dayAmount, time);
+
+    // VHS glitch (night, draw last before overlays)
+    drawVHSGlitch();
+
+    // dawn reboot glitch
+    drawRebootGlitch();
+
+    // neon drag trails (easter egg)
+    drawNeonDragTrails();
+
+    // matrix rain
+    drawMatrix();
+
+    // hack terminal
+    updateHackTerminal();
 
     // mouse trail
     const dx = mouseX - prevMouseX, dy = mouseY - prevMouseY;
