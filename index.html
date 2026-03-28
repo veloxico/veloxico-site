@@ -994,18 +994,27 @@
           if (wx + winW > bx + bw - 2 || wy + winH > by + bh - 1) continue;
 
           if (dayAmt < 0.4) {
-            // night: lit windows with warm colors
+            // night: lit windows with warm colors + some neon
             const litHash = Math.sin(wx * 0.13 + wy * 0.17 + b.x * 100) * 0.5 + 0.5;
             if (litHash > 0.3) {
-              // variety of window colors
-              const colors = [
-                [255, 220, 100],  // warm yellow
-                [255, 240, 180],  // soft white
-                [200, 230, 255],  // cool blue
-                [255, 200, 120],  // amber
-              ];
-              const wc = colors[Math.floor(litHash * colors.length * 2) % colors.length];
-              px(wx, wy, winW, winH, rgb(wc[0], wc[1], wc[2]), 0.6 + litHash * 0.35);
+              // ~20% of lit windows switch to neon colors at deep night
+              if (litHash > 0.82 && nightIntensity > 0.6) {
+                const neonIdx = Math.floor(litHash * 17) % 4;
+                const nCols = [[255,45,107],[0,212,255],[57,255,20],[191,0,255]];
+                const nc = nCols[neonIdx];
+                px(wx, wy, winW, winH, rgb(nc[0], nc[1], nc[2]), 0.5 + nightIntensity * 0.3);
+                // tiny glow spill
+                px(wx - 1, wy, winW + 2, winH, rgb(nc[0], nc[1], nc[2]), nightIntensity * 0.06);
+              } else {
+                const colors = [
+                  [255, 220, 100],  // warm yellow
+                  [255, 240, 180],  // soft white
+                  [200, 230, 255],  // cool blue
+                  [255, 200, 120],  // amber
+                ];
+                const wc = colors[Math.floor(litHash * colors.length * 2) % colors.length];
+                px(wx, wy, winW, winH, rgb(wc[0], wc[1], wc[2]), 0.6 + litHash * 0.35);
+              }
             } else {
               px(wx, wy, winW, winH, rgb(15, 20, 35), 0.6);
             }
@@ -1429,6 +1438,26 @@
           px(cx, reflY + 2, 2, streak, rgba(255, 210, 100, 0.04 * nightI));
         }
       }
+      // neon sign reflections in water — colored streaks
+      for (const s of neonSigns) {
+        if (!s.active) continue;
+        const b = buildings[s.bIdx];
+        if (!b) continue;
+        const sbx = b.x * W + mx * W * 0.03;
+        const shimmer2 = Math.sin(t * 0.02 + s.flickerPhase) * 4;
+        const neonCol = raveMode ? neonPalette[Math.floor(t * 0.2 + s.flickerPhase) % 4] : s.color;
+        const streak2 = 12 + Math.sin(t * 0.01 + s.flickerPhase) * 6;
+        px(sbx + shimmer2, reflY + 4, 3, streak2, neonCol, 0.06 * nightI);
+        px(sbx + shimmer2 + 1, reflY + 2, 1, streak2 + 4, neonCol, 0.03 * nightI);
+      }
+      // neon buoy reflections
+      const positions = [0.28, 0.50, 0.72];
+      for (let i = 0; i < 3; i++) {
+        const bux = W * positions[i];
+        const buShimmer = Math.sin(t * 0.025 + i) * 3;
+        const buPulse = Math.sin(t * 0.04 + i * 1.5) * 0.5 + 0.5;
+        px(bux - 1 + buShimmer, reflY + 12, 2, 8, neonPalette[i % 4], buPulse * 0.04 * nightI);
+      }
     }
   }
 
@@ -1505,17 +1534,30 @@
       }
       c.x += c.vx;
       if (c.x < W * 0.18 || c.x > W * 0.82) { c.life = 0; continue; }
-      const colors = [[180,40,40],[40,80,180],[60,160,60],[200,180,40]];
+      const colors = [[195,35,35],[35,75,185],[50,165,55],[210,185,35]];
       const cc = colors[c.extra % 4];
       const cx = c.x + ox;
-      // car body 8x4
-      px(cx, roadY - 4, 8, 4, rgb(cc[0], cc[1], cc[2]), dayAmt * 0.8);
-      // windshield
-      px(cx + (c.vx > 0 ? 5 : 1), roadY - 3, 2, 2, rgba(150, 200, 240, dayAmt * 0.6));
-      // night: headlights
+      const fwd = c.vx > 0;
+      // shadow underneath
+      px(cx + 1, roadY, 8, 1, rgba(0, 0, 0, 0.15));
+      // car body 10x3 with roof
+      px(cx, roadY - 3, 10, 3, rgb(cc[0], cc[1], cc[2]), dayAmt * 0.85);
+      // roof (darker)
+      px(cx + 2, roadY - 5, 5, 2, rgb(Math.max(0,cc[0]-30), Math.max(0,cc[1]-30), Math.max(0,cc[2]-30)), dayAmt * 0.8);
+      // windshield (reflective blue)
+      px(cx + (fwd ? 6 : 2), roadY - 4, 2, 2, rgba(130, 190, 240, dayAmt * 0.7));
+      // rear window
+      px(cx + (fwd ? 2 : 6), roadY - 4, 2, 1, rgba(100, 160, 210, dayAmt * 0.5));
+      // wheels
+      px(cx + 1, roadY, 2, 1, rgba(30, 30, 30, dayAmt * 0.7));
+      px(cx + 7, roadY, 2, 1, rgba(30, 30, 30, dayAmt * 0.7));
+      // headlights
       if (nightIntensity > 0.2) {
-        const hlx = c.vx > 0 ? cx + 8 : cx - 4;
-        px(hlx, roadY - 3, 4, 1, rgba(255, 255, 200, nightIntensity * 0.5));
+        const hlx = fwd ? cx + 10 : cx - 6;
+        px(hlx, roadY - 2, 6, 1, rgba(255, 255, 200, nightIntensity * 0.4));
+        px(fwd ? cx + 10 : cx - 1, roadY - 2, 1, 1, rgba(255, 255, 220, nightIntensity * 0.8));
+        // taillights (red)
+        px(fwd ? cx : cx + 9, roadY - 2, 1, 1, rgba(255, 30, 30, nightIntensity * 0.7));
       }
       activeParticles++;
     }
@@ -1543,8 +1585,12 @@
       }
       s.life -= 0.008; s.x += s.vx; s.y += s.vy;
       s.vx += (Math.random() - 0.5) * 0.02;
-      const a = s.life * dayAmt * 0.3;
-      px(s.x, s.y, s.extra, s.extra, rgba(180, 180, 180, a));
+      s.extra += 0.015; // grow as it rises
+      const a = s.life * dayAmt * 0.25;
+      // smoke fades from white to grey as it dissipates
+      const fade = 1 - s.life;
+      const sc = Math.round(lerpVal(220, 140, fade));
+      px(s.x, s.y, s.extra, s.extra, rgba(sc, sc, sc + 5, a));
       activeParticles++;
     }
   }
@@ -1553,22 +1599,31 @@
 
   // === GOD RAYS FROM SUN ===
   function drawGodRays(cyclePhase, dayAmt) {
-    if (isMobile || dayAmt < 0.4) return;
+    if (isMobile || dayAmt < 0.35) return;
     const sunPhase = (cyclePhase - 0.28) / 0.5;
     if (sunPhase < 0 || sunPhase > 1) return;
     const sunX = W * (0.1 + sunPhase * 0.8);
     const sunY = H * (0.25 - 0.18 * Math.sin(sunPhase * Math.PI));
+    const horizon = Math.sin(sunPhase * Math.PI);
     ctx.save();
-    ctx.globalAlpha = 0.025 * dayAmt;
-    for (let i = 0; i < 4; i++) {
-      const angle = -0.3 + i * 0.2 + Math.sin(time * 0.005 + i) * 0.05;
-      const len = H * 0.6;
+    // golden-hour tint stronger near sunrise/sunset
+    const warmth = 1 - horizon * 0.4;
+    for (let i = 0; i < 5; i++) {
+      const angle = -0.4 + i * 0.22 + Math.sin(time * 0.004 + i * 1.3) * 0.06;
+      const len = H * 0.65;
+      const rayW = 12 + Math.sin(time * 0.007 + i * 2) * 4;
+      const rayA = 0.018 * dayAmt * (0.7 + horizon * 0.3);
+      ctx.globalAlpha = rayA;
+      const grad = ctx.createLinearGradient(sunX, sunY, sunX + Math.cos(angle) * len, sunY + Math.sin(angle + 1.2) * len);
+      grad.addColorStop(0, rgba(255, Math.round(230 * warmth), Math.round(170 * warmth), 1));
+      grad.addColorStop(0.5, rgba(255, Math.round(240 * warmth), Math.round(190 * warmth), 0.5));
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.moveTo(sunX, sunY);
-      ctx.lineTo(sunX + Math.cos(angle) * len - 15, sunY + Math.sin(angle + 1.2) * len);
-      ctx.lineTo(sunX + Math.cos(angle) * len + 15, sunY + Math.sin(angle + 1.2) * len);
+      ctx.lineTo(sunX + Math.cos(angle) * len - rayW, sunY + Math.sin(angle + 1.2) * len);
+      ctx.lineTo(sunX + Math.cos(angle) * len + rayW, sunY + Math.sin(angle + 1.2) * len);
       ctx.closePath();
-      ctx.fillStyle = rgba(255, 240, 200, 1);
       ctx.fill();
     }
     ctx.restore();
@@ -1606,11 +1661,15 @@
         b.wingPhase += 0.08;
         const bx = form.x + b.offX;
         const by = form.y + b.offY + Math.sin(t * 0.01 + b.offX * 0.1) * 3;
-        const wing = Math.sin(b.wingPhase) * 3;
-        const c = Math.round(lerpVal(60, 50, dayAmt));
-        px(bx - 3, by - Math.abs(wing), 2, 1, rgb(c, c, c + 10), dayAmt * 0.7);
-        px(bx + 2, by - Math.abs(wing), 2, 1, rgb(c, c, c + 10), dayAmt * 0.7);
-        px(bx, by, 2, 1, rgb(c + 10, c + 10, c + 10), dayAmt * 0.8);
+        const wing = Math.sin(b.wingPhase) * 4;
+        // darker birds for contrast against sky
+        const c = Math.round(lerpVal(30, 35, dayAmt));
+        // wing tips (longer when up)
+        const wingLen = 2 + Math.max(0, -wing) * 0.5;
+        px(bx - wingLen - 1, by - Math.abs(wing), wingLen, 1, rgb(c, c, c + 8), dayAmt * 0.8);
+        px(bx + 2, by - Math.abs(wing), wingLen, 1, rgb(c, c, c + 8), dayAmt * 0.8);
+        // body (slightly larger)
+        px(bx, by, 2, 2, rgb(c + 5, c + 5, c + 8), dayAmt * 0.85);
         activeParticles++;
       }
     }
@@ -1635,15 +1694,29 @@
       const arcH = 25;
       const dy = -Math.sin(d.extra) * arcH;
       const y = d.extra2 + dy;
-      // dolphin body (6x3 pixel art)
-      const gr = Math.round(lerpVal(40, 100, dayAmt));
-      px(d.x, y, 6, 3, rgb(gr, gr + 20, gr + 40), dayAmt * 0.8);
-      // tail
-      px(d.x - (d.vx > 0 ? 4 : -4), y + 1, 3, 2, rgb(gr, gr + 15, gr + 30), dayAmt * 0.6);
+      // dolphin body — curved pixel art
+      const gr = Math.round(lerpVal(50, 110, dayAmt));
+      const dir = d.vx > 0 ? 1 : -1;
+      // belly (lighter)
+      px(d.x, y + 2, 7, 1, rgb(gr + 30, gr + 40, gr + 55), dayAmt * 0.7);
+      // main body
+      px(d.x, y, 8, 2, rgb(gr, gr + 25, gr + 45), dayAmt * 0.85);
+      // dorsal fin
+      px(d.x + 3, y - 2, 2, 2, rgb(gr - 5, gr + 15, gr + 35), dayAmt * 0.8);
+      // snout
+      px(d.x + (dir > 0 ? 8 : -2), y + 1, 2, 1, rgb(gr + 10, gr + 30, gr + 50), dayAmt * 0.75);
+      // tail flukes
+      px(d.x + (dir > 0 ? -3 : 8), y, 3, 1, rgb(gr, gr + 20, gr + 40), dayAmt * 0.65);
+      px(d.x + (dir > 0 ? -4 : 9), y - 1, 2, 1, rgb(gr, gr + 15, gr + 35), dayAmt * 0.5);
+      // eye
+      px(d.x + (dir > 0 ? 6 : 1), y, 1, 1, rgba(20, 20, 30, dayAmt * 0.9));
       // splash when entering/exiting water
-      if (d.extra < 0.3 || d.extra > 2.8) {
-        for (let i = 0; i < 2; i++) {
-          px(d.x + Math.random() * 8 - 4, d.extra2 - Math.random() * 4, 2, 2, rgba(200, 230, 255, dayAmt * 0.3));
+      if (d.extra < 0.4 || d.extra > 2.7) {
+        for (let i = 0; i < 3; i++) {
+          const sx = d.x + Math.random() * 12 - 4;
+          const sy = d.extra2 - Math.random() * 6;
+          px(sx, sy, 2, 2, rgba(200, 235, 255, dayAmt * 0.35));
+          px(sx + 1, sy - 2, 1, 1, rgba(255, 255, 255, dayAmt * 0.2)); // spray droplet
         }
       }
       activeParticles++;
@@ -1746,16 +1819,28 @@
     balloon.x += 0.0003;
     if (balloon.x > 1.1) { balloon.active = false; balloon.timer = 600; return; }
     const bx = balloon.x * W, by = balloon.y * H + Math.sin(time * 0.01) * 3;
-    // envelope (16x20)
-    px(bx - 6, by - 16, 12, 14, rgba(220, 60, 60, dayAmt * 0.8));
-    px(bx - 4, by - 18, 8, 4, rgba(240, 80, 60, dayAmt * 0.7));
-    // stripes
-    px(bx - 5, by - 12, 10, 3, rgba(255, 220, 60, dayAmt * 0.6));
+    // shadow on ground (very subtle)
+    px(bx - 3, H * 0.52, 6, 2, rgba(0, 0, 0, dayAmt * 0.04));
+    // envelope — layered for rounded look
+    px(bx - 5, by - 14, 10, 10, rgba(215, 45, 45, dayAmt * 0.85));
+    px(bx - 6, by - 11, 12, 6, rgba(210, 50, 50, dayAmt * 0.85));
+    px(bx - 4, by - 17, 8, 4, rgba(230, 65, 55, dayAmt * 0.8));
+    px(bx - 3, by - 19, 6, 3, rgba(240, 80, 60, dayAmt * 0.7));
+    // stripes (white and gold)
+    px(bx - 5, by - 12, 10, 2, rgba(255, 255, 255, dayAmt * 0.5));
+    px(bx - 5, by - 8, 10, 2, rgba(255, 220, 60, dayAmt * 0.55));
+    // highlight (sunlit side)
+    px(bx - 6, by - 13, 2, 8, rgba(255, 255, 255, dayAmt * 0.12));
     // basket
-    px(bx - 3, by, 6, 4, rgba(140, 100, 50, dayAmt * 0.7));
+    px(bx - 3, by + 1, 6, 4, rgba(130, 90, 40, dayAmt * 0.75));
+    px(bx - 2, by + 1, 4, 1, rgba(160, 120, 60, dayAmt * 0.6)); // basket rim
     // ropes
-    px(bx - 4, by - 2, 1, 3, rgba(100, 80, 40, dayAmt * 0.4));
-    px(bx + 3, by - 2, 1, 3, rgba(100, 80, 40, dayAmt * 0.4));
+    px(bx - 4, by - 3, 1, 5, rgba(90, 70, 35, dayAmt * 0.45));
+    px(bx + 3, by - 3, 1, 5, rgba(90, 70, 35, dayAmt * 0.45));
+    // flame flicker
+    if (Math.sin(time * 0.15) > 0) {
+      px(bx - 1, by - 1, 2, 2, rgba(255, 180, 50, dayAmt * 0.4));
+    }
     activeParticles++;
   }
 
@@ -1771,12 +1856,27 @@
       const bx = Math.floor(b.x * W + ox);
       const by = Math.floor(shoreTop - bh);
       const col = neonPalette[i % 4];
-      const a = nightIntensity * 0.25;
-      // outline
+      const pulse = Math.sin(time * 0.02 + i * 0.7) * 0.1 + 0.9;
+      const a = nightIntensity * 0.3 * pulse;
+      // soft outer glow (2px wider)
+      px(bx - 1, by - 1, bw + 2, 1, col, a * 0.15);
+      px(bx - 1, by - 1, 1, bh + 2, col, a * 0.12);
+      px(bx + bw, by - 1, 1, bh + 2, col, a * 0.12);
+      // sharp outline
       px(bx, by, bw, 1, col, a);
-      px(bx, by, 1, bh, col, a * 0.7);
-      px(bx + bw - 1, by, 1, bh, col, a * 0.7);
+      px(bx, by, 1, bh, col, a * 0.8);
+      px(bx + bw - 1, by, 1, bh, col, a * 0.8);
       px(bx, by + bh - 1, bw, 1, col, a * 0.5);
+      // roofline glow halo
+      if (bh > 30 && !lowPerf) {
+        const halo = ctx.createRadialGradient(bx + bw/2, by, 2, bx + bw/2, by, bw * 0.8);
+        halo.addColorStop(0, col);
+        halo.addColorStop(1, 'transparent');
+        ctx.save(); ctx.globalAlpha = a * 0.06;
+        ctx.fillStyle = halo;
+        ctx.fillRect(bx - bw * 0.3, by - bw * 0.5, bw * 1.6, bw);
+        ctx.restore();
+      }
     }
   }
 
@@ -1789,7 +1889,6 @@
       // activation logic (dusk transition)
       if (duskProgress > 0 && duskProgress >= s.activateAt) s.active = true;
       if (dawnProgress > 0 && dawnProgress >= (1 - s.offDelay)) {
-        // flicker off
         if (Math.random() < 0.02) s.active = false;
       }
       if (nightIntensity > 0.8) s.active = true;
@@ -1801,18 +1900,32 @@
       const bh = snap(b.hFrac * H);
       const bx = Math.floor(b.x * W + ox);
       const by = Math.floor(shoreTop - bh);
-      // flicker
+      // flicker with realistic buzzing
       const flicker = Math.sin(t * s.flickerSpeed + s.flickerPhase);
-      const raveMultiplier = raveMode ? 4 : 1;
-      const flickerA = flicker > (raveMode ? -0.8 : -0.2) ? 1 : 0.2;
+      const buzz = Math.sin(t * 0.5 + s.flickerPhase * 3) * 0.05; // high-freq buzz
+      const flickerA = flicker > (raveMode ? -0.8 : -0.15) ? 1 : 0.15;
+      // rave mode: cycle colors wildly
+      const activeColor = raveMode ? neonPalette[Math.floor(t * 0.2 + s.flickerPhase) % 4] : s.color;
       if (raveMode) s.flickerPhase += 0.3;
-      const a = nightIntensity * flickerA * 0.8;
+      const a = nightIntensity * flickerA * 0.85 + buzz;
       const sx = bx + 2, sy = by + Math.floor(bh * 0.3);
-      px(sx, sy, Math.min(s.w, bw - 4), s.h, s.color, a);
-      // glow
-      if (a > 0.4) {
-        const gSize = s.w + 4;
-        px(sx - 2, sy - 1, gSize, s.h + 2, s.color, a * 0.08);
+      const sw = Math.min(s.w, bw - 4);
+      // main sign body
+      px(sx, sy, sw, s.h, activeColor, a);
+      // bright inner core
+      px(sx + 1, sy, sw - 2, s.h, '#fff', a * 0.2);
+      // multi-layer glow
+      if (a > 0.3 && !lowPerf) {
+        px(sx - 1, sy - 1, sw + 2, s.h + 2, activeColor, a * 0.15);
+        px(sx - 3, sy - 2, sw + 6, s.h + 4, activeColor, a * 0.05);
+        // radial glow halo
+        const halo = ctx.createRadialGradient(sx + sw/2, sy + s.h/2, 1, sx + sw/2, sy + s.h/2, sw);
+        halo.addColorStop(0, activeColor);
+        halo.addColorStop(1, 'transparent');
+        ctx.save(); ctx.globalAlpha = a * 0.08;
+        ctx.fillStyle = halo;
+        ctx.fillRect(sx - sw/2, sy - sw/2, sw * 2, sw);
+        ctx.restore();
       }
     }
   }
@@ -1822,7 +1935,7 @@
     if (nightIntensity <= 0.2) return;
     const ox = mx * W * 0.03;
     const snap = v => Math.round(v / PX) * PX || PX;
-    const tallBuildings = buildings.slice(-5);
+    const tallBuildings = buildings.slice(-6);
     for (let i = 0; i < tallBuildings.length; i++) {
       const b = tallBuildings[i];
       const bw = snap(b.wFrac * W);
@@ -1830,12 +1943,20 @@
       const bx = Math.floor(b.x * W + ox);
       const by = Math.floor(shoreTop - bh);
       const col = neonPalette[(i + 1) % 4];
-      // vertical scrolling LED strip
-      const stripX = bx + bw - 2;
-      for (let y = 0; y < bh; y += 4) {
-        const scrollY = (y + t * 0.5) % bh;
-        const bright = (Math.floor(scrollY / 4) % 3 === 0) ? 1 : 0.2;
-        px(stripX, by + y, 1, 3, col, nightIntensity * bright * 0.5);
+      // vertical scrolling LED strip — both edges for taller buildings
+      const stripXL = bx + 1;
+      const stripXR = bx + bw - 2;
+      for (let y = 0; y < bh; y += 3) {
+        const scrollY = (y + t * (0.4 + i * 0.1)) % bh;
+        const wave = Math.sin(scrollY * 0.1) * 0.5 + 0.5;
+        const bright = wave > 0.6 ? 1 : 0.15;
+        px(stripXR, by + y, 1, 2, col, nightIntensity * bright * 0.55);
+        // second strip on left edge for tall buildings
+        if (bh > 40) {
+          const scrollY2 = (y + t * 0.3 + bh * 0.5) % bh;
+          const wave2 = Math.sin(scrollY2 * 0.12) * 0.5 + 0.5;
+          px(stripXL, by + y, 1, 2, neonPalette[(i + 2) % 4], nightIntensity * (wave2 > 0.6 ? 0.45 : 0.1));
+        }
       }
     }
   }
@@ -1857,8 +1978,17 @@
       p.x += Math.sin(p.extra) * 0.2;
       p.y += Math.cos(p.extra * 0.7) * 0.1;
       const pulse = (Math.sin(p.extra * 2) * 0.5 + 0.5);
-      const a = nightIntensity * p.life * pulse * 0.6;
-      px(p.x, p.y, 2, 2, rgba(0, 255, 180, a));
+      const a = nightIntensity * p.life * pulse * 0.7;
+      // color varies between cyan-green and blue-green
+      const hueShift = Math.sin(p.extra * 0.5) * 0.5 + 0.5;
+      const pr = Math.round(hueShift * 30);
+      const pg = Math.round(200 + hueShift * 55);
+      const pb = Math.round(140 + (1 - hueShift) * 80);
+      px(p.x, p.y, 2, 2, rgba(pr, pg, pb, a));
+      // soft glow around each dot
+      if (pulse > 0.6 && !lowPerf) {
+        px(p.x - 1, p.y - 1, 4, 4, rgba(pr, pg, pb, a * 0.15));
+      }
       activeParticles++;
     }
     // Bio explosion easter egg
@@ -1883,12 +2013,28 @@
     const positions = [0.28, 0.50, 0.72];
     for (let i = 0; i < 3; i++) {
       const bx = W * positions[i];
-      const by = seaY + 8 + Math.sin(t * 0.02 + i * 2) * 2;
+      const bob = Math.sin(t * 0.02 + i * 2) * 2;
+      const by = seaY + 8 + bob;
       const pulse = Math.sin(t * 0.04 + i * 1.5) * 0.5 + 0.5;
       const col = neonPalette[i % 4];
-      px(bx - 2, by, 4, 3, col, nightIntensity * (0.3 + pulse * 0.5));
-      // glow on water
-      px(bx - 4, by + 3, 8, 2, col, nightIntensity * pulse * 0.1);
+      // buoy body
+      px(bx - 2, by, 4, 4, rgba(60, 60, 70, nightIntensity * 0.7));
+      // neon ring
+      px(bx - 2, by + 1, 4, 1, col, nightIntensity * (0.4 + pulse * 0.5));
+      // top beacon
+      px(bx - 1, by - 1, 2, 1, col, nightIntensity * (0.5 + pulse * 0.5));
+      // radial glow
+      if (!lowPerf) {
+        const glow = ctx.createRadialGradient(bx, by + 1, 1, bx, by + 1, 12);
+        glow.addColorStop(0, col);
+        glow.addColorStop(1, 'transparent');
+        ctx.save(); ctx.globalAlpha = nightIntensity * pulse * 0.08;
+        ctx.fillStyle = glow;
+        ctx.fillRect(bx - 12, by - 11, 24, 24);
+        ctx.restore();
+      }
+      // water glow
+      px(bx - 5, by + 4, 10, 2, col, nightIntensity * pulse * 0.12);
     }
   }
 
@@ -1999,8 +2145,16 @@
       }
       s.life -= 0.012; s.y += s.vy; s.x += s.vx;
       s.vx += (Math.random() - 0.5) * 0.05;
-      const a = s.life * nightIntensity * 0.2;
-      px(s.x, s.y, s.extra, s.extra, rgba(200, 200, 220, a));
+      const a = s.life * nightIntensity * 0.25;
+      // steam picks up neon color tint from nearby buildings
+      const tintIdx = Math.floor(s.x / (W / 4)) % 4;
+      const tints = [[220,200,230],[200,220,240],[210,230,220],[230,210,220]];
+      const st = tints[tintIdx];
+      px(s.x, s.y, s.extra, s.extra, rgba(st[0], st[1], st[2], a));
+      // faint neon backlight on steam
+      if (s.life > 0.7) {
+        px(s.x - 1, s.y, s.extra + 2, s.extra, neonPalette[tintIdx], a * 0.08);
+      }
       activeParticles++;
     }
   }
@@ -2036,13 +2190,21 @@
         }
       }
     }
-    // silhouette (4x8)
-    px(fx, fy, 4, 2, rgba(10, 10, 15, nightIntensity * 0.9)); // head
-    px(fx - 1, fy + 2, 6, 4, rgba(10, 10, 15, nightIntensity * 0.85)); // body
-    px(fx, fy + 6, 2, 2, rgba(10, 10, 15, nightIntensity * 0.8)); // legs
-    px(fx + 2, fy + 6, 2, 2, rgba(10, 10, 15, nightIntensity * 0.8));
-    // glowing eyes
-    px(fx + 1, fy + 1, 1, 1, rgba(255, 0, 0, nightIntensity * 0.7 * (Math.sin(time * 0.05) * 0.3 + 0.7)));
+    // silhouette (4x8) with cloak flutter
+    const flutter = Math.sin(time * 0.06) * 1;
+    px(fx, fy, 4, 2, rgba(8, 8, 14, nightIntensity * 0.95)); // head
+    px(fx - 1, fy + 2, 6, 4, rgba(8, 8, 14, nightIntensity * 0.9)); // body
+    px(fx - 1 + flutter, fy + 4, 2, 3, rgba(12, 10, 18, nightIntensity * 0.7)); // cloak edge
+    px(fx, fy + 6, 2, 2, rgba(10, 10, 15, nightIntensity * 0.85)); // legs
+    px(fx + 2, fy + 6, 2, 2, rgba(10, 10, 15, nightIntensity * 0.85));
+    // glowing eyes (pulsing red with halo)
+    const eyePulse = Math.sin(time * 0.05) * 0.3 + 0.7;
+    px(fx + 1, fy + 1, 1, 1, rgba(255, 20, 20, nightIntensity * 0.85 * eyePulse));
+    px(fx + 3, fy + 1, 1, 1, rgba(255, 20, 20, nightIntensity * 0.7 * eyePulse));
+    // eye glow halo
+    if (!lowPerf) {
+      px(fx, fy, 5, 2, rgba(255, 0, 0, nightIntensity * 0.04 * eyePulse));
+    }
     // store screen position for click detection
     mystFigure.screenX = fx; mystFigure.screenY = fy;
   }
@@ -2051,17 +2213,23 @@
   function drawNeonAurora(t) {
     if (nightIntensity <= 0.3) return;
     ctx.save();
-    const y = H * 0.04;
-    for (let i = 0; i < 3; i++) {
-      const grad = ctx.createLinearGradient(0, y + i * 8, W, y + i * 8);
-      const colors = [neonPalette[0], neonPalette[1], neonPalette[3], neonPalette[2]];
-      const shift = (t * 0.001 + i * 0.3) % 1;
-      for (let j = 0; j < 4; j++) {
-        grad.addColorStop(((j / 4) + shift) % 1, colors[j]);
-      }
-      ctx.globalAlpha = nightIntensity * 0.04;
+    const baseY = H * 0.03;
+    // multiple shimmering bands with smooth color transitions
+    for (let i = 0; i < 5; i++) {
+      const bandY = baseY + i * 5 + Math.sin(t * 0.008 + i * 0.8) * 3;
+      const grad = ctx.createLinearGradient(0, bandY, W, bandY);
+      const shift = (t * 0.0008 + i * 0.25) % 1;
+      // smooth 5-stop gradient for rich aurora look
+      grad.addColorStop(((0 + shift) % 1), 'rgba(255,45,107,0.8)');
+      grad.addColorStop(((0.25 + shift) % 1), 'rgba(0,212,255,0.9)');
+      grad.addColorStop(((0.5 + shift) % 1), 'rgba(191,0,255,0.7)');
+      grad.addColorStop(((0.75 + shift) % 1), 'rgba(57,255,20,0.6)');
+      grad.addColorStop(((0.98 + shift) % 1), 'rgba(255,45,107,0.5)');
+      const bandA = nightIntensity * (0.025 + Math.sin(t * 0.005 + i * 1.5) * 0.01);
+      ctx.globalAlpha = bandA;
       ctx.fillStyle = grad;
-      ctx.fillRect(0, y + i * 6, W, 5);
+      const bandH = 4 + Math.sin(t * 0.006 + i) * 2;
+      ctx.fillRect(0, bandY, W, bandH);
     }
     ctx.restore();
   }
@@ -2083,17 +2251,30 @@
     neonMoto.x += neonMoto.dir * 1.2;
     if (neonMoto.x < W * 0.18 || neonMoto.x > W * 0.82) { neonMoto.active = false; return; }
     const mx2 = neonMoto.x + ox;
-    // body (6x4)
-    px(mx2, roadY - 5, 6, 3, rgba(30, 30, 40, nightIntensity * 0.9));
-    // neon underglow
-    px(mx2 - 1, roadY - 2, 8, 1, '#ff2d6b', nightIntensity * 0.7);
-    // trail
-    neonMoto.trail.push({ x: mx2, y: roadY - 2 });
-    if (neonMoto.trail.length > 8) neonMoto.trail.shift();
+    const fwd2 = neonMoto.dir > 0;
+    // rider silhouette
+    px(mx2 + 1, roadY - 8, 3, 3, rgba(20, 20, 25, nightIntensity * 0.85));
+    // body (8x3)
+    px(mx2, roadY - 5, 8, 3, rgba(25, 25, 35, nightIntensity * 0.9));
+    // chrome accent
+    px(mx2 + (fwd2 ? 5 : 1), roadY - 5, 2, 1, rgba(150, 150, 170, nightIntensity * 0.5));
+    // wheels
+    px(mx2 + 1, roadY - 2, 2, 2, rgba(40, 40, 50, nightIntensity * 0.8));
+    px(mx2 + 5, roadY - 2, 2, 2, rgba(40, 40, 50, nightIntensity * 0.8));
+    // neon underglow (pink + blue mix)
+    px(mx2 - 1, roadY - 1, 10, 1, '#ff2d6b', nightIntensity * 0.7);
+    px(mx2, roadY, 8, 1, '#ff2d6b', nightIntensity * 0.2); // ground reflection
+    // headlight beam
+    const hlDir = fwd2 ? 1 : -1;
+    px(mx2 + (fwd2 ? 8 : -4), roadY - 4, 4, 1, rgba(255, 255, 230, nightIntensity * 0.6));
+    // trail with fade
+    neonMoto.trail.push({ x: mx2, y: roadY - 1 });
+    if (neonMoto.trail.length > 12) neonMoto.trail.shift();
     for (let i = 0; i < neonMoto.trail.length; i++) {
       const tp = neonMoto.trail[i];
-      const a = (i / neonMoto.trail.length) * nightIntensity * 0.4;
-      px(tp.x, tp.y, 3, 1, '#ff2d6b', a);
+      const trailA = (i / neonMoto.trail.length) * nightIntensity * 0.5;
+      px(tp.x, tp.y, 4, 1, '#ff2d6b', trailA);
+      px(tp.x + 1, tp.y + 1, 2, 1, '#ff2d6b', trailA * 0.3); // reflection
     }
     activeParticles++;
   }
