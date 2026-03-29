@@ -8,7 +8,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect width='16' height='16' fill='%2306060f'/><rect x='6' y='1' width='4' height='2' fill='%2300ff88'/><rect x='4' y='3' width='8' height='2' fill='%2300ff88'/><rect x='3' y='5' width='10' height='2' fill='%234ecdc4'/><rect x='4' y='7' width='8' height='2' fill='%234ecdc4'/><rect x='5' y='9' width='6' height='2' fill='%23a855f7'/><rect x='6' y='11' width='4' height='2' fill='%23a855f7'/><rect x='7' y='13' width='2' height='2' fill='%23ff6b35'/><rect x='6' y='2' width='2' height='2' fill='%23ffffff' opacity='0.4'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=block" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=block" rel="stylesheet">
   <style>
     :root {
       --bg: #06060f;
@@ -20,10 +20,6 @@
       --dim: #444466;
       --card: #0c0c1e;
       --pixel: 4px;
-      --neon-pink: #ff2d6b;
-      --neon-blue: #00d4ff;
-      --neon-green: #39ff14;
-      --neon-violet: #bf00ff;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -35,6 +31,59 @@
       color: var(--text);
       overflow-x: hidden;
       image-rendering: pixelated;
+    }
+    body.booting { overflow: hidden; }
+
+    /* ===== BOOT SEQUENCE ===== */
+    .boot-screen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #000;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 15% 10%;
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(0.35rem, 0.9vw, 0.55rem);
+      color: var(--green);
+      line-height: 2.2;
+      transition: opacity 0.3s;
+    }
+    .boot-screen.off {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .boot-line { opacity: 0; }
+    .boot-line.show { opacity: 1; }
+    .boot-line .ok { color: var(--cyan); }
+    .boot-line .warn { color: var(--orange); }
+    .boot-cursor {
+      display: inline-block;
+      width: 0.6em; height: 1em;
+      background: var(--green);
+      vertical-align: middle;
+      animation: cursor-blink 0.5s steps(2) infinite;
+    }
+    /* CRT turn-on flash */
+    .crt-on {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #fff;
+      z-index: 10000;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .crt-on.flash {
+      animation: crt-flash 0.4s ease-out forwards;
+    }
+    @keyframes crt-flash {
+      0% { opacity: 0.8; }
+      30% { opacity: 0.15; }
+      60% { opacity: 0.3; }
+      100% { opacity: 0; }
     }
 
     /* ===== HERO ===== */
@@ -209,39 +258,112 @@
       to { opacity: 1; }
     }
 
+    /* ===== SCROLL INDICATOR ===== */
+    .scroll-hint {
+      position: absolute;
+      bottom: 2.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 11;
+      animation: bounce-down 2s ease-in-out infinite, fade-up 1s ease-out 3s forwards;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .scroll-hint svg { filter: drop-shadow(0 0 6px rgba(0,255,136,0.4)); }
+    @keyframes bounce-down {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(8px); }
+    }
+
+    /* ===== PAGE ATMOSPHERE ===== */
+    .page-body {
+      position: relative;
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.008) 0px, rgba(255,255,255,0.008) 1px, transparent 1px, transparent 4px),
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.005) 0px, rgba(255,255,255,0.005) 1px, transparent 1px, transparent 4px),
+        var(--bg);
+      overflow: hidden;
+    }
+    .page-body::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 200px;
+      background: linear-gradient(to bottom, var(--bg) 0%, transparent 100%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* ===== PIXEL DIVIDER ===== */
+    .pixel-divider {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0;
+      padding: 1.5rem 0;
+      opacity: 0.35;
+    }
+    .pixel-divider .px-block {
+      width: 4px; height: 4px;
+      background: var(--green);
+      animation: divider-pulse 3s ease-in-out infinite;
+    }
+    .pixel-divider .px-block:nth-child(odd) { background: var(--cyan); animation-delay: 0.5s; }
+    .pixel-divider .px-block:nth-child(3n) { background: var(--purple); animation-delay: 1s; }
+    .pixel-divider .px-gap { width: 4px; }
+    @keyframes divider-pulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.3); }
+    }
+
     /* ===== SECTION ===== */
     section {
       position: relative;
-      z-index: 1;
+      z-index: 2;
       max-width: 1100px;
       margin: 0 auto;
-      padding: 5rem 1.5rem;
+      padding: 4rem 1.5rem 5rem;
     }
 
     .section-title {
-      font-size: clamp(0.7rem, 1.8vw, 1rem);
+      font-size: clamp(0.8rem, 2vw, 1.1rem);
       color: var(--cyan);
-      margin-bottom: 2.5rem;
+      margin-bottom: 3rem;
       text-align: center;
       text-shadow: 0 0 20px rgba(78,205,196,0.3);
+      position: relative;
+      letter-spacing: 0.15em;
     }
     .section-title span { color: #666688; }
+    .section-title::before,
+    .section-title::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: clamp(30px, 8vw, 80px);
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      opacity: 0.25;
+    }
+    .section-title::before { right: calc(100% + 1rem); }
+    .section-title::after { left: calc(100% + 1rem); }
 
     /* ===== PROJECT CARDS ===== */
     .projects-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 1.2rem;
+      gap: 1.5rem;
     }
 
     .project-card {
-      background: var(--card);
-      border: 2px solid #1a1a35;
-      padding: 1.4rem;
+      background: linear-gradient(165deg, rgba(12,12,30,0.95) 0%, rgba(8,8,22,0.98) 100%);
+      border: 1px solid rgba(0,255,136,0.08);
+      border-left: 3px solid var(--green);
+      padding: 0;
       text-decoration: none;
       color: inherit;
       display: block;
-      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
       overflow: hidden;
       opacity: 0;
@@ -250,8 +372,38 @@
     .project-card.visible {
       opacity: 1;
       transform: translateY(0);
-      transition: opacity 0.6s ease-out, transform 0.6s ease-out, border-color 0.2s, box-shadow 0.2s;
+      transition: opacity 0.5s ease-out, transform 0.5s ease-out, border-color 0.3s, box-shadow 0.3s, border-left-color 0.3s;
     }
+
+    /* terminal-style header bar */
+    .project-card-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0.6rem 1rem;
+      background: rgba(0,255,136,0.03);
+      border-bottom: 1px solid rgba(0,255,136,0.06);
+    }
+    .terminal-dot {
+      width: 6px; height: 6px;
+      border-radius: 0;
+      opacity: 0.5;
+    }
+    .terminal-dot:nth-child(1) { background: #ff5f57; }
+    .terminal-dot:nth-child(2) { background: #febc2e; }
+    .terminal-dot:nth-child(3) { background: #28c840; }
+    .terminal-dot-label {
+      margin-left: auto;
+      font-family: 'Silkscreen', 'Press Start 2P', monospace;
+      font-size: 0.5rem;
+      color: var(--dim);
+      letter-spacing: 0.1em;
+    }
+
+    .project-card-body {
+      padding: 1.2rem 1.2rem 1.4rem;
+    }
+
     /* scan-line reveal on hover */
     .project-card::before {
       content: '';
@@ -260,35 +412,62 @@
       width: 100%; height: 100%;
       background: linear-gradient(180deg,
         transparent 0%,
-        rgba(0,255,136,0.03) 45%,
-        rgba(0,255,136,0.08) 50%,
-        rgba(0,255,136,0.03) 55%,
+        rgba(0,255,136,0.02) 45%,
+        rgba(0,255,136,0.06) 50%,
+        rgba(0,255,136,0.02) 55%,
         transparent 100%
       );
-      transition: top 0.5s ease;
+      transition: top 0.6s ease;
       z-index: 1;
       pointer-events: none;
     }
     .project-card:hover::before { top: 100%; }
     .project-card:hover {
-      border-color: var(--green);
-      transform: translateY(-2px);
-      box-shadow: 0 0 25px rgba(0,255,136,0.1), 0 8px 30px rgba(0,0,0,0.3);
+      border-color: rgba(0,255,136,0.2);
+      border-left-color: var(--cyan);
+      transform: translateY(-3px);
+      box-shadow:
+        0 0 30px rgba(0,255,136,0.08),
+        0 12px 40px rgba(0,0,0,0.4),
+        inset 0 0 30px rgba(0,255,136,0.02);
+    }
+    .project-card:hover .project-name { text-shadow: 0 0 12px rgba(0,255,136,0.4); }
+    .project-card:hover .terminal-dot { opacity: 1; }
+
+    /* pixel corner decorations */
+    .project-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 12px; height: 12px;
+      border-right: 2px solid rgba(0,255,136,0.15);
+      border-bottom: 2px solid rgba(0,255,136,0.15);
+      transition: border-color 0.3s;
+    }
+    .project-card:hover::after {
+      border-color: rgba(78,205,196,0.4);
     }
 
     .project-name {
       font-size: clamp(0.7rem, 2vw, 0.9rem);
       color: var(--green);
-      margin-bottom: 0.7rem;
+      margin-bottom: 0.8rem;
       position: relative;
       z-index: 2;
       line-height: 1.4;
+      transition: text-shadow 0.3s;
+    }
+    .project-name::before {
+      content: '> ';
+      color: var(--dim);
+      opacity: 0.5;
     }
     .project-desc {
-      font-size: clamp(0.55rem, 1.5vw, 0.7rem);
-      line-height: 1.8;
-      color: #aaaacc;
-      margin-bottom: 1rem;
+      font-family: 'Silkscreen', 'Press Start 2P', monospace;
+      font-size: clamp(0.6rem, 1.5vw, 0.75rem);
+      line-height: 1.9;
+      color: #9999bb;
+      margin-bottom: 1.2rem;
       min-height: 2rem;
       position: relative;
       z-index: 2;
@@ -297,21 +476,25 @@
       display: flex;
       flex-wrap: wrap;
       gap: 1rem;
-      font-size: clamp(0.5rem, 1.2vw, 0.6rem);
-      color: #aaaacc;
+      font-family: 'Silkscreen', 'Press Start 2P', monospace;
+      font-size: clamp(0.5rem, 1.2vw, 0.65rem);
+      color: #8888aa;
       position: relative;
       z-index: 2;
+      padding-top: 0.8rem;
+      border-top: 1px solid rgba(255,255,255,0.04);
     }
     .project-lang {
       display: flex;
       align-items: center;
-      gap: 0.3rem;
+      gap: 0.4rem;
     }
     .lang-dot {
       width: 8px; height: 8px;
       display: inline-block;
+      box-shadow: 0 0 6px currentColor;
     }
-    .project-stars { color: var(--orange); }
+    .project-stars { color: var(--orange); text-shadow: 0 0 8px rgba(255,107,53,0.3); }
 
     .projects-loading {
       text-align: center;
@@ -319,6 +502,7 @@
       font-size: clamp(0.6rem, 1.5vw, 0.8rem);
       padding: 3rem;
       animation: pulse 1.5s ease-in-out infinite;
+      grid-column: 1 / -1;
     }
     @keyframes pulse {
       0%, 100% { opacity: 0.4; }
@@ -328,9 +512,8 @@
     /* ===== FOOTER ===== */
     footer {
       position: relative;
-      z-index: 1;
-      border-top: 2px solid #1a1a35;
-      padding: 3rem 1.5rem;
+      z-index: 2;
+      padding: 3.5rem 1.5rem 2rem;
       max-width: 1100px;
       margin: 0 auto;
     }
@@ -338,16 +521,28 @@
     .footer-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 2.5rem;
+      gap: 3rem;
     }
     .footer-grid > div {
       min-width: 0;
     }
 
     .footer-title {
-      font-size: clamp(0.75rem, 2vw, 1rem);
+      font-size: clamp(0.7rem, 1.8vw, 0.9rem);
       color: var(--orange);
       margin-bottom: 1.5rem;
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 15px rgba(255,107,53,0.25);
+      position: relative;
+      padding-bottom: 0.8rem;
+    }
+    .footer-title::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 40px; height: 2px;
+      background: var(--orange);
+      opacity: 0.4;
     }
 
     .donate-list {
@@ -367,107 +562,337 @@
     }
     .donate-label {
       color: var(--cyan);
+      font-size: clamp(0.45rem, 1.2vw, 0.6rem);
+      letter-spacing: 0.1em;
     }
     .donate-addr {
       display: block;
-      color: #aaaacc;
+      color: #8888aa;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       cursor: pointer;
-      transition: all 0.2s ease;
-      font-size: clamp(0.35rem, 1.7cqi, 0.65rem);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      font-family: 'Silkscreen', 'Press Start 2P', monospace;
+      font-size: clamp(0.4rem, 1.7cqi, 0.65rem);
       line-height: 1.4;
       padding: 0.6rem 0.8rem;
-      background: rgba(0, 255, 136, 0.03);
-      border: 1px solid rgba(0, 255, 136, 0.1);
+      background: rgba(0, 255, 136, 0.02);
+      border: 1px solid rgba(0, 255, 136, 0.06);
+      border-left: 2px solid rgba(0, 255, 136, 0.15);
       width: 100%;
       max-width: 100%;
       box-sizing: border-box;
       min-width: 0;
     }
-    .donate-addr:hover { 
-      color: #ffffff; 
-      background: rgba(0, 255, 136, 0.1);
-      border-color: rgba(0, 255, 136, 0.4);
+    .donate-addr:hover {
+      color: #ccccee;
+      background: rgba(0, 255, 136, 0.06);
+      border-color: rgba(0, 255, 136, 0.25);
+      border-left-color: var(--green);
       transform: translateX(4px);
+      box-shadow: 0 0 15px rgba(0,255,136,0.05);
     }
-    .donate-addr.copied { 
+    .donate-addr.copied {
       color: var(--bg) !important;
       background: var(--green) !important;
       border-color: var(--green) !important;
       transform: translateX(0);
+      box-shadow: 0 0 20px rgba(0,255,136,0.3) !important;
     }
 
     .links-list {
       list-style: none;
       font-size: clamp(0.55rem, 1.5vw, 0.75rem);
-      line-height: 2.5;
+    }
+    .links-list li {
+      margin-bottom: 0.4rem;
     }
     .links-list a {
       color: var(--green);
       text-decoration: none;
-      transition: color 0.2s;
+      transition: all 0.25s;
+      display: inline-block;
+      padding: 0.5rem 0;
+      position: relative;
     }
-    .links-list a:hover { color: var(--cyan); }
-    .links-list a::before { content: '> '; color: #666688; }
+    .links-list a:hover {
+      color: var(--cyan);
+      transform: translateX(6px);
+      text-shadow: 0 0 10px rgba(78,205,196,0.3);
+    }
+    .links-list a::before { content: '> '; color: #444466; transition: color 0.25s; }
+    .links-list a:hover::before { color: var(--cyan); }
 
     .footer-copy {
       text-align: center;
+      font-family: 'Silkscreen', 'Press Start 2P', monospace;
       font-size: clamp(0.5rem, 1.2vw, 0.6rem);
-      color: #8888aa;
-      margin-top: 2.5rem;
+      color: #555577;
+      margin-top: 3rem;
       padding-top: 1.5rem;
-      border-top: 1px solid #121230;
+      border-top: 1px solid rgba(255,255,255,0.04);
+      letter-spacing: 0.05em;
     }
 
     /* scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: #1a1a35; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+    ::-webkit-scrollbar-thumb { background: #1a1a35; border-radius: 0; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--green); }
 
-    /* Intensified CRT at night */
-    .hero.crt-intense::after {
-      background: repeating-linear-gradient(
-        0deg,
-        rgba(0,0,0,0.10) 0px,
-        rgba(0,0,0,0.10) 1px,
-        transparent 1px,
-        transparent 3px
-      );
+    /* ===== ABOUT SECTION ===== */
+    .about-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 2.5rem;
+      align-items: start;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .pixel-avatar {
+      width: 100px; height: 100px;
+      position: relative;
+      image-rendering: pixelated;
+    }
+    .pixel-avatar canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+    .about-text {
+      font-family: 'Silkscreen', 'Press Start 2P', monospace;
+      font-size: clamp(0.55rem, 1.3vw, 0.7rem);
+      color: #9999bb;
+      line-height: 2;
+      margin-bottom: 1.5rem;
+    }
+    .about-text strong { color: var(--green); font-weight: normal; }
+
+    .skill-bars { display: flex; flex-direction: column; gap: 0.8rem; }
+    .skill-row {
+      display: grid;
+      grid-template-columns: 90px 1fr 30px;
+      align-items: center;
+      gap: 0.8rem;
+      font-size: clamp(0.4rem, 1vw, 0.55rem);
+    }
+    .skill-label { color: var(--cyan); letter-spacing: 0.05em; white-space: nowrap; }
+    .skill-track {
+      height: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      position: relative;
+      overflow: hidden;
+    }
+    .skill-fill {
+      height: 100%;
+      background: var(--green);
+      width: 0;
+      transition: width 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      position: relative;
+      image-rendering: pixelated;
+    }
+    .skill-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: repeating-linear-gradient(90deg, transparent 0px, transparent 3px, rgba(0,0,0,0.2) 3px, rgba(0,0,0,0.2) 4px);
+    }
+    .skill-fill.orange { background: var(--orange); }
+    .skill-fill.cyan { background: var(--cyan); }
+    .skill-fill.purple { background: var(--purple); }
+    .skill-val { color: var(--dim); text-align: right; }
+
+    /* ===== STATS BAR ===== */
+    .stats-bar {
+      display: flex;
+      justify-content: center;
+      gap: clamp(1.5rem, 4vw, 3rem);
+      padding: 1.5rem;
+      position: relative;
+      z-index: 2;
+    }
+    .stat-item {
+      text-align: center;
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    .stat-item.visible {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    }
+    .stat-num {
+      font-size: clamp(1rem, 3vw, 1.6rem);
+      color: var(--green);
+      text-shadow: 0 0 15px rgba(0,255,136,0.3);
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+    .stat-label {
+      font-family: 'Silkscreen', 'Press Start 2P', monospace;
+      font-size: clamp(0.35rem, 0.8vw, 0.5rem);
+      color: var(--dim);
+      letter-spacing: 0.1em;
     }
 
-    /* Matrix rain overlay */
-    #matrix-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      z-index: 9999; pointer-events: none; opacity: 0;
-      transition: opacity 0.3s;
-      background: rgba(0,0,0,0.85);
+    /* ===== FEATURED CARD ===== */
+    .project-card.featured {
+      grid-column: 1 / -1;
+      border-left-color: var(--orange);
+      background: linear-gradient(165deg, rgba(20,14,8,0.95) 0%, rgba(12,10,22,0.98) 100%);
     }
-    #matrix-overlay.active { opacity: 1; }
-    #matrix-overlay canvas { width: 100%; height: 100%; }
+    .project-card.featured .project-card-body {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+      align-items: start;
+    }
+    .featured-badge {
+      font-size: 0.45rem;
+      color: var(--orange);
+      border: 1px solid var(--orange);
+      padding: 0.3em 0.6em;
+      letter-spacing: 0.15em;
+      animation: pulse 2s ease-in-out infinite;
+      white-space: nowrap;
+      align-self: start;
+    }
+    .project-card.featured .project-card-header { background: rgba(255,107,53,0.04); border-bottom-color: rgba(255,107,53,0.08); }
+    .project-card.featured:hover { border-left-color: var(--cyan); }
 
-    /* Hack terminal overlay */
-    #hack-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      z-index: 9998; display: none; align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.92);
-      font-family: 'Press Start 2P', monospace;
+    /* ===== CUSTOM CURSOR ===== */
+    .pixel-cursor { cursor: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'><rect x='7' y='0' width='2' height='5' fill='%2300ff88'/><rect x='7' y='11' width='2' height='5' fill='%2300ff88'/><rect x='0' y='7' width='5' height='2' fill='%2300ff88'/><rect x='11' y='7' width='5' height='2' fill='%2300ff88'/><rect x='7' y='7' width='2' height='2' fill='%2300ff88' opacity='0.5'/></svg>") 8 8, crosshair; }
+
+    /* ===== MINI TERMINAL ===== */
+    .mini-terminal {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(0,255,136,0.15);
+      padding: 1rem;
+      margin-top: 2rem;
+      max-width: 500px;
+      font-family: 'Silkscreen', 'Press Start 2P', monospace;
+      font-size: clamp(0.4rem, 1vw, 0.55rem);
+      position: relative;
     }
-    #hack-overlay.active { display: flex; }
-    #hack-terminal {
-      color: var(--neon-green); font-size: clamp(0.4rem, 1vw, 0.6rem);
-      padding: 2rem; max-width: 600px; line-height: 2;
-      text-shadow: 0 0 10px rgba(57,255,20,0.5);
+    .mini-terminal-header {
+      color: var(--dim);
+      margin-bottom: 0.8rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
     }
+    .terminal-output {
+      color: var(--green);
+      line-height: 2;
+      max-height: 120px;
+      overflow-y: auto;
+      margin-bottom: 0.5rem;
+      scrollbar-width: thin;
+      scrollbar-color: #1a1a35 transparent;
+    }
+    .terminal-output .cmd { color: var(--cyan); }
+    .terminal-output .err { color: var(--orange); }
+    .terminal-input-line {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .terminal-prompt { color: var(--cyan); }
+    .terminal-input {
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--green);
+      font-family: inherit;
+      font-size: inherit;
+      flex: 1;
+      caret-color: var(--green);
+    }
+
+    /* ===== HEATMAP ===== */
+    .heatmap-section {
+      text-align: center;
+      padding: 0 1.5rem 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+    .heatmap-grid {
+      display: inline-grid;
+      grid-template-rows: repeat(7, 8px);
+      grid-auto-flow: column;
+      gap: 2px;
+      margin-top: 1rem;
+    }
+    .heatmap-cell {
+      width: 8px; height: 8px;
+      background: rgba(0,255,136,0.04);
+      border: 1px solid rgba(0,255,136,0.03);
+      transition: background 0.3s;
+    }
+    .heatmap-cell.l1 { background: rgba(0,255,136,0.15); }
+    .heatmap-cell.l2 { background: rgba(0,255,136,0.3); }
+    .heatmap-cell.l3 { background: rgba(0,255,136,0.5); }
+    .heatmap-cell.l4 { background: rgba(0,255,136,0.75); }
+    .heatmap-label {
+      font-family: 'Silkscreen', 'Press Start 2P', monospace;
+      font-size: 0.4rem;
+      color: var(--dim);
+      margin-top: 0.6rem;
+      letter-spacing: 0.1em;
+    }
+
+    /* ===== DAY/NIGHT TOGGLE ===== */
+    .cycle-toggle {
+      position: fixed;
+      top: 1rem; right: 1rem;
+      z-index: 100;
+      background: rgba(6,6,15,0.6);
+      border: 1px solid rgba(255,255,255,0.1);
+      width: 32px; height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      animation: fade-up 1s ease-out 4s forwards;
+      transition: border-color 0.3s, background 0.3s;
+      padding: 0;
+      font-size: 0;
+    }
+    .cycle-toggle:hover {
+      border-color: var(--green);
+      background: rgba(0,255,136,0.08);
+    }
+    .cycle-toggle svg { width: 16px; height: 16px; }
 
     @media (max-width: 600px) {
       .footer-grid { grid-template-columns: 1fr; }
+      .projects-grid { grid-template-columns: 1fr; gap: 1rem; }
+      .about-grid { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+      .skill-row { grid-template-columns: 70px 1fr 25px; }
+      .stats-bar { flex-wrap: wrap; }
     }
   </style>
 </head>
-<body>
+<body class="booting">
+
+<!-- BOOT SEQUENCE -->
+<div class="crt-on" id="crt-on"></div>
+<div class="boot-screen" id="boot-screen">
+  <div class="boot-line" data-delay="100">VELOXICO OS v2.6.0</div>
+  <div class="boot-line" data-delay="400">===============================</div>
+  <div class="boot-line" data-delay="700">INITIALIZING PIXEL ENGINE... <span class="ok">[OK]</span></div>
+  <div class="boot-line" data-delay="1100">LOADING TERRAIN DATA... <span class="ok">[OK]</span></div>
+  <div class="boot-line" data-delay="1500">CONNECTING TO GITHUB API... <span class="ok">[OK]</span></div>
+  <div class="boot-line" data-delay="1900">COMPILING SHADERS... <span class="ok">[OK]</span></div>
+  <div class="boot-line" data-delay="2200">DAY/NIGHT CYCLE <span class="warn">ENGAGED</span></div>
+  <div class="boot-line" data-delay="2500">EASTER EGGS LOADED: <span class="warn">4</span></div>
+  <div class="boot-line" data-delay="2900">&gt; SYSTEM READY<span class="boot-cursor"></span></div>
+</div>
+
+<!-- DAY/NIGHT TOGGLE -->
+<button class="cycle-toggle" id="cycle-toggle" title="Toggle day/night">
+  <svg viewBox="0 0 16 16" fill="none"><rect x="6" y="1" width="4" height="2" fill="#ffdd33"/><rect x="1" y="6" width="2" height="4" fill="#ffdd33"/><rect x="13" y="6" width="2" height="4" fill="#ffdd33"/><rect x="6" y="13" width="4" height="2" fill="#ffdd33"/><rect x="5" y="5" width="6" height="6" fill="#ffdd33"/></svg>
+</button>
 
 <!-- HERO -->
 <div class="hero" id="hero">
@@ -479,6 +904,64 @@
     <p class="hero-sub" id="hero-sub"></p>
     <p class="hero-bio" id="hero-bio"></p>
   </div>
+  <!-- scroll indicator -->
+  <div class="scroll-hint">
+    <svg width="20" height="12" viewBox="0 0 20 12" fill="none">
+      <rect x="0" y="0" width="4" height="4" fill="#00ff88" opacity="0.6"/>
+      <rect x="4" y="4" width="4" height="4" fill="#00ff88" opacity="0.8"/>
+      <rect x="8" y="8" width="4" height="4" fill="#00ff88"/>
+      <rect x="12" y="4" width="4" height="4" fill="#00ff88" opacity="0.8"/>
+      <rect x="16" y="0" width="4" height="4" fill="#00ff88" opacity="0.6"/>
+    </svg>
+  </div>
+</div>
+
+<div class="page-body">
+
+<!-- PIXEL DIVIDER -->
+<div class="pixel-divider" aria-hidden="true">
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+  <h2 class="section-title"><span>// </span>ABOUT</h2>
+  <div class="about-grid">
+    <div class="pixel-avatar"><canvas id="avatar-canvas" width="20" height="20"></canvas></div>
+    <div>
+      <p class="about-text">
+        <strong>DevOps engineer</strong> & open-source builder. I create self-hosted tools
+        that give people control over their own data. Currently building
+        <strong>wikso</strong> (Confluence alternative) and <strong>lockso</strong> (password manager).
+        Based on the Mediterranean coast.
+      </p>
+      <div class="skill-bars" id="skill-bars">
+        <div class="skill-row"><span class="skill-label">DEVOPS</span><div class="skill-track"><div class="skill-fill" data-width="92"></div></div><span class="skill-val">92</span></div>
+        <div class="skill-row"><span class="skill-label">BACKEND</span><div class="skill-track"><div class="skill-fill orange" data-width="85"></div></div><span class="skill-val">85</span></div>
+        <div class="skill-row"><span class="skill-label">FRONTEND</span><div class="skill-track"><div class="skill-fill cyan" data-width="65"></div></div><span class="skill-val">65</span></div>
+        <div class="skill-row"><span class="skill-label">SECURITY</span><div class="skill-track"><div class="skill-fill purple" data-width="78"></div></div><span class="skill-val">78</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar" id="stats-bar">
+  <div class="stat-item"><span class="stat-num" data-target="0" id="stat-repos">0</span><span class="stat-label">REPOS</span></div>
+  <div class="stat-item"><span class="stat-num" data-target="0" id="stat-stars">0</span><span class="stat-label">STARS</span></div>
+  <div class="stat-item"><span class="stat-num" data-target="0" id="stat-langs">0</span><span class="stat-label">LANGUAGES</span></div>
 </div>
 
 <!-- PROJECTS -->
@@ -488,6 +971,30 @@
     <div class="projects-loading">LOADING...</div>
   </div>
 </section>
+
+<!-- PIXEL DIVIDER -->
+<div class="pixel-divider" aria-hidden="true">
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div><div class="px-gap"></div>
+  <div class="px-block"></div>
+</div>
+
+<!-- HEATMAP -->
+<div class="heatmap-section" id="heatmap-section">
+  <h2 class="section-title"><span>// </span>ACTIVITY</h2>
+  <div class="heatmap-grid" id="heatmap-grid"></div>
+  <p class="heatmap-label">GITHUB CONTRIBUTIONS (LAST 12 WEEKS)</p>
+</div>
 
 <!-- FOOTER -->
 <footer>
@@ -511,11 +1018,22 @@
       </ul>
     </div>
   </div>
+  <!-- MINI TERMINAL -->
+  <div class="mini-terminal">
+    <div class="mini-terminal-header">veloxico@terminal ~ $</div>
+    <div class="terminal-output" id="terminal-output">
+      <div>Type <span class="cmd">help</span> for available commands</div>
+    </div>
+    <div class="terminal-input-line">
+      <span class="terminal-prompt">&gt;</span>
+      <input class="terminal-input" id="terminal-input" type="text" autocomplete="off" spellcheck="false" placeholder="type a command...">
+    </div>
+  </div>
+
   <p class="footer-copy">&copy; 2026 veloxico</p>
 </footer>
 
-<div id="matrix-overlay"><canvas id="matrix-canvas"></canvas></div>
-<div id="hack-overlay"><div id="hack-terminal"></div></div>
+</div><!-- /page-body -->
 
 <script>
 /* ===== INTERACTIVE PIXEL MEDITERRANEAN BAY ===== */
@@ -687,60 +1205,6 @@
   let rapidClicks = [], fireworkShow = false, fireworkTimer = 0;
   let shakeOffset = 0;
 
-  // === INFRASTRUCTURE ===
-  // FPS monitor
-  let lastFrameTime = performance.now(), deltaTime = 16, fpsAccum = 0, fpsCount = 0, avgFps = 60, lowPerf = false;
-  // Mobile detection
-  const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) || (window.innerWidth < 768);
-  // Global particle budget
-  let activeParticles = 0;
-  const MAX_PARTICLES = 200;
-  // Phase-derived vars (set in frame)
-  let nightIntensity = 0, duskProgress = 0, dawnProgress = 0;
-
-  // === OBJECT POOLS ===
-  function createPool(n) { const p = []; for (let i = 0; i < n; i++) p.push({ life: 0, x: 0, y: 0, vx: 0, vy: 0, extra: 0, extra2: 0, extra3: 0 }); return p; }
-  const carPool = createPool(isMobile ? 2 : 4);
-  const smokePool = createPool(isMobile ? 12 : 24);
-  const birdPool = createPool(isMobile ? 8 : 18);
-  const dolphinPool = createPool(3);
-  const butterflyPool = createPool(isMobile ? 3 : 6);
-  const planktonPool = createPool(isMobile ? 20 : 40);
-  const dronePool = createPool(3);
-  const steamPool = createPool(isMobile ? 12 : 24);
-
-  // === DAYTIME STATE ===
-  let flagWave = 0;
-  // Rain/rainbow state machine
-  let rainState = 'clear', rainTimer = 0, rainParticles = [], rainbowAlpha = 0;
-  // Hot air balloon
-  const balloon = { x: -0.1, y: 0.12, active: false, timer: 0 };
-  // Delivery drone
-  const deliveryDrone = { x: 0.3, y: 0, active: false, targetX: 0.6, timer: 0 };
-
-  // === NIGHT STATE ===
-  // Neon signs (initialized after buildings — see below buildings.sort)
-  const neonSigns = [];
-  const neonPalette = ['#ff2d6b','#00d4ff','#39ff14','#bf00ff'];
-  // Mysterious figure (initialized after buildings — see below buildings.sort)
-  const mystFigure = { bIdx: 0, visible: false, jumpY: 0, jumping: false, jumpVY: 0, targetBIdx: 0 };
-  // Neon motorcycle
-  const neonMoto = { x: 0, dir: 1, active: false, trail: [] };
-  // VHS glitch
-  let vhsGlitchTimer = 0, vhsSlices = [];
-  // Dawn reboot glitch
-  let rebootGlitch = false, rebootTimer = 0;
-
-  // === EASTER EGG STATE (new) ===
-  let raveMode = false, raveTimer = 0;
-  let bioExplosion = false, bioExpX = 0, bioExpY = 0, bioExpTimer = 0;
-  let matrixRainActive = false, matrixTimer = 0;
-  let neonDragTrail = [], isDraggingNight = false;
-  let hackActive = false, hackTimer = 0;
-  let konamiSeq = [], konamiCode = [38,38,40,40,37,39,37,39,66,65];
-  let waterHoldTimer = 0, waterHoldActive = false;
-  let neonSignClicks = [], lastSignClickTime = 0;
-
   heroEl.addEventListener('click', e => {
     const rect = canvas.getBoundingClientRect();
     const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
@@ -763,6 +1227,11 @@
       const speed = 2 + Math.random() * 4;
       explosions.push({ x: cx, y: cy, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed,
         life: 1, size: 2 + Math.floor(Math.random()*3)*2, color, gravity: 0.06 + Math.random()*0.04 });
+    }
+    // scare nearby bird flocks
+    for (const f of birdFlocks) {
+      const dist = Math.sqrt((f.x - cx) ** 2 + (f.y - cy) ** 2);
+      if (dist < 150) f.scared = 60;
     }
   });
 
@@ -910,23 +1379,6 @@
   }
   buildings.sort((a, b) => a.hFrac - b.hFrac); // draw shorter first
 
-  // Initialize neon signs and mysterious figure (depends on buildings)
-  const signRng = (function(s){return function(){s=(s*9301+49297)%233280;return s/233280;};})(777);
-  for (let i = 0; i < 10; i++) {
-    neonSigns.push({
-      bIdx: Math.floor(signRng() * buildings.length),
-      color: neonPalette[Math.floor(signRng() * 4)],
-      w: 8 + Math.floor(signRng() * 12),
-      h: 3 + Math.floor(signRng() * 3),
-      flickerPhase: signRng() * Math.PI * 2,
-      flickerSpeed: 0.05 + signRng() * 0.1,
-      activateAt: signRng(),
-      active: false,
-      offDelay: signRng() * 0.3
-    });
-  }
-  mystFigure.bIdx = buildings.length - 1;
-
   function drawHouses(seaY, dayAmt, mx) {
     const ox = mx * W * 0.03;
 
@@ -994,27 +1446,18 @@
           if (wx + winW > bx + bw - 2 || wy + winH > by + bh - 1) continue;
 
           if (dayAmt < 0.4) {
-            // night: lit windows with warm colors + some neon
+            // night: lit windows with warm colors
             const litHash = Math.sin(wx * 0.13 + wy * 0.17 + b.x * 100) * 0.5 + 0.5;
             if (litHash > 0.3) {
-              // ~20% of lit windows switch to neon colors at deep night
-              if (litHash > 0.82 && nightIntensity > 0.6) {
-                const neonIdx = Math.floor(litHash * 17) % 4;
-                const nCols = [[255,45,107],[0,212,255],[57,255,20],[191,0,255]];
-                const nc = nCols[neonIdx];
-                px(wx, wy, winW, winH, rgb(nc[0], nc[1], nc[2]), 0.5 + nightIntensity * 0.3);
-                // tiny glow spill
-                px(wx - 1, wy, winW + 2, winH, rgb(nc[0], nc[1], nc[2]), nightIntensity * 0.06);
-              } else {
-                const colors = [
-                  [255, 220, 100],  // warm yellow
-                  [255, 240, 180],  // soft white
-                  [200, 230, 255],  // cool blue
-                  [255, 200, 120],  // amber
-                ];
-                const wc = colors[Math.floor(litHash * colors.length * 2) % colors.length];
-                px(wx, wy, winW, winH, rgb(wc[0], wc[1], wc[2]), 0.6 + litHash * 0.35);
-              }
+              // variety of window colors
+              const colors = [
+                [255, 220, 100],  // warm yellow
+                [255, 240, 180],  // soft white
+                [200, 230, 255],  // cool blue
+                [255, 200, 120],  // amber
+              ];
+              const wc = colors[Math.floor(litHash * colors.length * 2) % colors.length];
+              px(wx, wy, winW, winH, rgb(wc[0], wc[1], wc[2]), 0.6 + litHash * 0.35);
             } else {
               px(wx, wy, winW, winH, rgb(15, 20, 35), 0.6);
             }
@@ -1252,9 +1695,8 @@
       }
     }
 
-    // flag (enhanced waving)
-    flagWave = Math.sin(t * 0.08);
-    const flagPhase = flagWave * 3;
+    // flag
+    const flagPhase = Math.sin(t * 0.08) * 2;
     if (pirateMode) {
       // jolly roger flag
       const fw = 8 + flagPhase;
@@ -1438,26 +1880,6 @@
           px(cx, reflY + 2, 2, streak, rgba(255, 210, 100, 0.04 * nightI));
         }
       }
-      // neon sign reflections in water — colored streaks
-      for (const s of neonSigns) {
-        if (!s.active) continue;
-        const b = buildings[s.bIdx];
-        if (!b) continue;
-        const sbx = b.x * W + mx * W * 0.03;
-        const shimmer2 = Math.sin(t * 0.02 + s.flickerPhase) * 4;
-        const neonCol = raveMode ? neonPalette[Math.floor(t * 0.2 + s.flickerPhase) % 4] : s.color;
-        const streak2 = 12 + Math.sin(t * 0.01 + s.flickerPhase) * 6;
-        px(sbx + shimmer2, reflY + 4, 3, streak2, neonCol, 0.06 * nightI);
-        px(sbx + shimmer2 + 1, reflY + 2, 1, streak2 + 4, neonCol, 0.03 * nightI);
-      }
-      // neon buoy reflections
-      const positions = [0.28, 0.50, 0.72];
-      for (let i = 0; i < 3; i++) {
-        const bux = W * positions[i];
-        const buShimmer = Math.sin(t * 0.025 + i) * 3;
-        const buPulse = Math.sin(t * 0.04 + i * 1.5) * 0.5 + 0.5;
-        px(bux - 1 + buShimmer, reflY + 12, 2, 8, neonPalette[i % 4], buPulse * 0.04 * nightI);
-      }
     }
   }
 
@@ -1516,999 +1938,396 @@
     });
   }
 
-  // === PIXEL CARS ON SHORE ROAD ===
-  function updateCars(shoreTop, mx, t, dayAmt) {
-    if (dayAmt < 0.25) return;
-    const ox = mx * W * 0.03;
-    const roadY = shoreTop + 1;
-    for (const c of carPool) {
-      if (c.life <= 0) {
-        if (Math.random() < 0.005 * dayAmt) {
-          c.life = 1; c.x = c.vx > 0 ? W * 0.20 : W * 0.80;
-          c.vx = (Math.random() > 0.5 ? 1 : -1) * (0.4 + Math.random() * 0.3);
-          c.x = c.vx > 0 ? W * 0.20 : W * 0.78;
-          // car color index
-          c.extra = Math.floor(Math.random() * 4);
-        }
-        continue;
+  // === BIRD FLOCK (V-formation) ===
+  const birdFlocks = [];
+  function spawnBirdFlock() {
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    const count = 5 + Math.floor(Math.random() * 4);
+    const birds = [];
+    for (let i = 0; i < count; i++) {
+      const side = i % 2 === 0 ? 1 : -1;
+      const row = Math.ceil(i / 2);
+      birds.push({ ox: -row * 12 * dir, oy: side * row * 6, wingPhase: Math.random() * Math.PI * 2 });
+    }
+    birdFlocks.push({
+      x: dir > 0 ? -40 : W + 40, y: H * (0.08 + Math.random() * 0.2),
+      vx: dir * (0.4 + Math.random() * 0.3), vy: (Math.random() - 0.5) * 0.1,
+      birds, scared: 0
+    });
+  }
+  let nextFlock = 200 + Math.random() * 400;
+
+  function drawBirdFlocks(dayAmt, t) {
+    if (dayAmt < 0.15) return;
+    if (t > nextFlock && birdFlocks.length < 2) { spawnBirdFlock(); nextFlock = t + 600 + Math.random() * 800; }
+    for (let i = birdFlocks.length - 1; i >= 0; i--) {
+      const f = birdFlocks[i];
+      f.x += f.vx + (f.scared > 0 ? (Math.random() - 0.5) * 3 : 0);
+      f.y += f.vy + Math.sin(t * 0.01) * 0.15;
+      if (f.scared > 0) f.scared--;
+      if (f.x < -80 || f.x > W + 80) { birdFlocks.splice(i, 1); continue; }
+      const bc = Math.round(lerpVal(40, 60, dayAmt));
+      for (const b of f.birds) {
+        b.wingPhase += 0.08;
+        const bx = f.x + b.ox + (f.scared > 0 ? (Math.random() - 0.5) * 8 : 0);
+        const by = f.y + b.oy + (f.scared > 0 ? (Math.random() - 0.5) * 6 : 0);
+        const wing = Math.sin(b.wingPhase) * 3;
+        px(bx - 3, by - Math.abs(wing), 2, 1, rgb(bc, bc, bc + 10), dayAmt * 0.8);
+        px(bx + 1, by - Math.abs(wing), 2, 1, rgb(bc, bc, bc + 10), dayAmt * 0.8);
+        px(bx, by, 1, 1, rgb(bc + 10, bc + 10, bc + 20), dayAmt * 0.9);
       }
-      c.x += c.vx;
-      if (c.x < W * 0.18 || c.x > W * 0.82) { c.life = 0; continue; }
-      const colors = [[195,35,35],[35,75,185],[50,165,55],[210,185,35]];
-      const cc = colors[c.extra % 4];
-      const cx = c.x + ox;
-      const fwd = c.vx > 0;
-      // shadow underneath
-      px(cx + 1, roadY, 8, 1, rgba(0, 0, 0, 0.15));
-      // car body 10x3 with roof
-      px(cx, roadY - 3, 10, 3, rgb(cc[0], cc[1], cc[2]), dayAmt * 0.85);
-      // roof (darker)
-      px(cx + 2, roadY - 5, 5, 2, rgb(Math.max(0,cc[0]-30), Math.max(0,cc[1]-30), Math.max(0,cc[2]-30)), dayAmt * 0.8);
-      // windshield (reflective blue)
-      px(cx + (fwd ? 6 : 2), roadY - 4, 2, 2, rgba(130, 190, 240, dayAmt * 0.7));
-      // rear window
-      px(cx + (fwd ? 2 : 6), roadY - 4, 2, 1, rgba(100, 160, 210, dayAmt * 0.5));
-      // wheels
-      px(cx + 1, roadY, 2, 1, rgba(30, 30, 30, dayAmt * 0.7));
-      px(cx + 7, roadY, 2, 1, rgba(30, 30, 30, dayAmt * 0.7));
-      // headlights
-      if (nightIntensity > 0.2) {
-        const hlx = fwd ? cx + 10 : cx - 6;
-        px(hlx, roadY - 2, 6, 1, rgba(255, 255, 200, nightIntensity * 0.4));
-        px(fwd ? cx + 10 : cx - 1, roadY - 2, 1, 1, rgba(255, 255, 220, nightIntensity * 0.8));
-        // taillights (red)
-        px(fwd ? cx : cx + 9, roadY - 2, 1, 1, rgba(255, 30, 30, nightIntensity * 0.7));
-      }
-      activeParticles++;
     }
   }
 
   // === CHIMNEY SMOKE ===
-  function updateSmoke(shoreTop, mx, dayAmt, t) {
-    if (dayAmt < 0.2) return;
+  const smokeParticles = [];
+  // pick 4 random tall buildings for chimneys
+  const chimneyBuildings = buildings.filter(b => b.hFrac > 0.06).sort(() => Math.random() - 0.5).slice(0, 4);
+
+  function updateSmoke(seaY, mx, dayAmt, t) {
     const ox = mx * W * 0.03;
-    // spawn from tallest 3 buildings
-    const tallest = buildings.slice(-3);
-    for (const s of smokePool) {
-      if (s.life <= 0) {
-        if (Math.random() < 0.03 * dayAmt && activeParticles < MAX_PARTICLES) {
-          const b = tallest[Math.floor(Math.random() * 3)];
-          const bx = b.x * W + ox;
-          const bh = b.hFrac * H;
-          s.life = 1; s.x = bx + (b.wFrac * W) / 2;
-          s.y = shoreTop - bh - 4;
-          s.vx = (Math.random() - 0.5) * 0.2;
-          s.vy = -0.3 - Math.random() * 0.2;
-          s.extra = 2 + Math.floor(Math.random() * 3); // size
-        }
-        continue;
-      }
-      s.life -= 0.008; s.x += s.vx; s.y += s.vy;
-      s.vx += (Math.random() - 0.5) * 0.02;
-      s.extra += 0.015; // grow as it rises
-      const a = s.life * dayAmt * 0.25;
-      // smoke fades from white to grey as it dissipates
-      const fade = 1 - s.life;
-      const sc = Math.round(lerpVal(220, 140, fade));
-      px(s.x, s.y, s.extra, s.extra, rgba(sc, sc, sc + 5, a));
-      activeParticles++;
-    }
-  }
-
-  // === WAVING FLAG (modify existing flag in drawSailboat — handled via flagWave) ===
-
-  // === GOD RAYS FROM SUN ===
-  function drawGodRays(cyclePhase, dayAmt) {
-    if (isMobile || dayAmt < 0.35) return;
-    const sunPhase = (cyclePhase - 0.28) / 0.5;
-    if (sunPhase < 0 || sunPhase > 1) return;
-    const sunX = W * (0.1 + sunPhase * 0.8);
-    const sunY = H * (0.25 - 0.18 * Math.sin(sunPhase * Math.PI));
-    const horizon = Math.sin(sunPhase * Math.PI);
-    ctx.save();
-    // golden-hour tint stronger near sunrise/sunset
-    const warmth = 1 - horizon * 0.4;
-    for (let i = 0; i < 5; i++) {
-      const angle = -0.4 + i * 0.22 + Math.sin(time * 0.004 + i * 1.3) * 0.06;
-      const len = H * 0.65;
-      const rayW = 12 + Math.sin(time * 0.007 + i * 2) * 4;
-      const rayA = 0.018 * dayAmt * (0.7 + horizon * 0.3);
-      ctx.globalAlpha = rayA;
-      const grad = ctx.createLinearGradient(sunX, sunY, sunX + Math.cos(angle) * len, sunY + Math.sin(angle + 1.2) * len);
-      grad.addColorStop(0, rgba(255, Math.round(230 * warmth), Math.round(170 * warmth), 1));
-      grad.addColorStop(0.5, rgba(255, Math.round(240 * warmth), Math.round(190 * warmth), 0.5));
-      grad.addColorStop(1, 'transparent');
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.moveTo(sunX, sunY);
-      ctx.lineTo(sunX + Math.cos(angle) * len - rayW, sunY + Math.sin(angle + 1.2) * len);
-      ctx.lineTo(sunX + Math.cos(angle) * len + rayW, sunY + Math.sin(angle + 1.2) * len);
-      ctx.closePath();
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  // === V-FORMATION BIRDS ===
-  let birdFormations = [];
-  function initBirdFormation() {
-    const count = 5 + Math.floor(Math.random() * 3);
-    const startX = Math.random() > 0.5 ? -0.1 : 1.1;
-    const dir = startX < 0 ? 1 : -1;
-    const birds = [];
-    for (let i = 0; i < count; i++) {
-      const row = Math.floor(i / 2) + 1;
-      const side = i % 2 === 0 ? -1 : 1;
-      birds.push({
-        offX: (i === 0 ? 0 : row * 12 * -dir) + (i === 0 ? 0 : side * row * 8),
-        offY: (i === 0 ? 0 : row * 6 * Math.abs(side)),
-        wingPhase: Math.random() * Math.PI * 2
-      });
-    }
-    birdFormations.push({ x: startX * W, y: H * (0.08 + Math.random() * 0.12), vx: dir * (0.5 + Math.random() * 0.3), birds });
-  }
-
-  function updateBirds(dayAmt, t) {
-    if (dayAmt < 0.2) { birdFormations = []; return; }
-    if (duskProgress > 0.3) return; // birds depart at dusk
-    // spawn new formation occasionally
-    if (birdFormations.length < (isMobile ? 1 : 2) && Math.random() < 0.002 * dayAmt) initBirdFormation();
-    for (let f = birdFormations.length - 1; f >= 0; f--) {
-      const form = birdFormations[f];
-      form.x += form.vx;
-      if (form.x < -W * 0.2 || form.x > W * 1.2) { birdFormations.splice(f, 1); continue; }
-      for (const b of form.birds) {
-        b.wingPhase += 0.08;
-        const bx = form.x + b.offX;
-        const by = form.y + b.offY + Math.sin(t * 0.01 + b.offX * 0.1) * 3;
-        const wing = Math.sin(b.wingPhase) * 4;
-        // darker birds for contrast against sky
-        const c = Math.round(lerpVal(30, 35, dayAmt));
-        // wing tips (longer when up)
-        const wingLen = 2 + Math.max(0, -wing) * 0.5;
-        px(bx - wingLen - 1, by - Math.abs(wing), wingLen, 1, rgb(c, c, c + 8), dayAmt * 0.8);
-        px(bx + 2, by - Math.abs(wing), wingLen, 1, rgb(c, c, c + 8), dayAmt * 0.8);
-        // body (slightly larger)
-        px(bx, by, 2, 2, rgb(c + 5, c + 5, c + 8), dayAmt * 0.85);
-        activeParticles++;
+    // spawn smoke from chimney buildings
+    if (t % 8 === 0) {
+      for (const b of chimneyBuildings) {
+        const bw = Math.round(b.wFrac * W / PX) * PX || PX;
+        const bh = Math.round(b.hFrac * H / PX) * PX || PX;
+        const bx = b.x * W + ox;
+        const by = seaY - bh;
+        smokeParticles.push({
+          x: bx + bw * 0.5, y: by - 2,
+          vx: 0.15 + Math.random() * 0.1, vy: -(0.2 + Math.random() * 0.15),
+          life: 1, size: 2 + Math.floor(Math.random() * 2) * 2
+        });
       }
     }
+    for (let i = smokeParticles.length - 1; i >= 0; i--) {
+      const s = smokeParticles[i];
+      s.x += s.vx + Math.sin(t * 0.02 + i) * 0.1;
+      s.y += s.vy;
+      s.vy *= 0.995;
+      s.life -= 0.008;
+      s.size += 0.02;
+      if (s.life <= 0) { smokeParticles.splice(i, 1); continue; }
+      const g = dayAmt > 0.3 ? Math.round(lerpVal(80, 160, dayAmt)) : Math.round(lerpVal(40, 100, s.life));
+      px(s.x, s.y, Math.round(s.size), Math.round(s.size), rgb(g, g, g + 5), s.life * 0.25);
+    }
+    if (smokeParticles.length > 80) smokeParticles.splice(0, smokeParticles.length - 80);
   }
 
-  // === DOLPHINS ===
-  function updateDolphins(seaY, dayAmt, t) {
-    if (dayAmt < 0.25) return;
-    for (const d of dolphinPool) {
-      if (d.life <= 0) {
-        if (Math.random() < 0.002 && activeParticles < MAX_PARTICLES) {
-          d.life = 1; d.x = W * (0.25 + Math.random() * 0.5);
-          d.extra = 0; // arc phase
-          d.vx = (Math.random() > 0.5 ? 1 : -1) * 0.8;
-          d.extra2 = seaY; // base Y
-        }
-        continue;
-      }
-      d.extra += 0.025;
-      if (d.extra > Math.PI) { d.life = 0; continue; }
-      d.x += d.vx;
-      const arcH = 25;
-      const dy = -Math.sin(d.extra) * arcH;
-      const y = d.extra2 + dy;
-      // dolphin body — curved pixel art
-      const gr = Math.round(lerpVal(50, 110, dayAmt));
-      const dir = d.vx > 0 ? 1 : -1;
-      // belly (lighter)
-      px(d.x, y + 2, 7, 1, rgb(gr + 30, gr + 40, gr + 55), dayAmt * 0.7);
-      // main body
-      px(d.x, y, 8, 2, rgb(gr, gr + 25, gr + 45), dayAmt * 0.85);
-      // dorsal fin
-      px(d.x + 3, y - 2, 2, 2, rgb(gr - 5, gr + 15, gr + 35), dayAmt * 0.8);
-      // snout
-      px(d.x + (dir > 0 ? 8 : -2), y + 1, 2, 1, rgb(gr + 10, gr + 30, gr + 50), dayAmt * 0.75);
-      // tail flukes
-      px(d.x + (dir > 0 ? -3 : 8), y, 3, 1, rgb(gr, gr + 20, gr + 40), dayAmt * 0.65);
-      px(d.x + (dir > 0 ? -4 : 9), y - 1, 2, 1, rgb(gr, gr + 15, gr + 35), dayAmt * 0.5);
-      // eye
-      px(d.x + (dir > 0 ? 6 : 1), y, 1, 1, rgba(20, 20, 30, dayAmt * 0.9));
-      // splash when entering/exiting water
-      if (d.extra < 0.4 || d.extra > 2.7) {
-        for (let i = 0; i < 3; i++) {
-          const sx = d.x + Math.random() * 12 - 4;
-          const sy = d.extra2 - Math.random() * 6;
-          px(sx, sy, 2, 2, rgba(200, 235, 255, dayAmt * 0.35));
-          px(sx + 1, sy - 2, 1, 1, rgba(255, 255, 255, dayAmt * 0.2)); // spray droplet
-        }
-      }
-      activeParticles++;
-    }
-  }
+  // === AIRPLANE ===
+  let airplane = null;
+  let nextAirplane = 1200 + Math.random() * 1800;
 
-  // === BUTTERFLIES ===
-  function updateButterflies(dayAmt, mx, t) {
-    if (dayAmt < 0.3) return;
-    for (const b of butterflyPool) {
-      if (b.life <= 0) {
-        if (Math.random() < 0.004 && activeParticles < MAX_PARTICLES) {
-          b.life = 1;
-          const side = Math.random() > 0.5;
-          b.x = side ? W * (0.02 + Math.random() * 0.18) : W * (0.78 + Math.random() * 0.18);
-          b.y = H * (0.35 + Math.random() * 0.15);
-          b.vx = (Math.random() - 0.5) * 0.5;
-          b.vy = (Math.random() - 0.5) * 0.3;
-          b.extra = Math.random() * Math.PI * 2; // wing phase
-          b.extra2 = Math.floor(Math.random() * 4); // color idx
-        }
-        continue;
+  function updateAirplane(dayAmt, starAlpha, t) {
+    if (t > nextAirplane && !airplane) {
+      const dir = Math.random() > 0.5 ? 1 : -1;
+      airplane = {
+        x: dir > 0 ? -30 : W + 30, y: H * (0.05 + Math.random() * 0.12),
+        vx: dir * (0.7 + Math.random() * 0.3), dir,
+        trailX: [], blinkPhase: 0
+      };
+      nextAirplane = t + 1800 + Math.random() * 2400;
+    }
+    if (!airplane) return;
+    airplane.x += airplane.vx;
+    airplane.blinkPhase += 0.05;
+    // contrail
+    if (Math.abs(airplane.x) < W + 50) {
+      airplane.trailX.push({ x: airplane.x, y: airplane.y, life: 1 });
+    }
+    // draw trail
+    for (let i = airplane.trailX.length - 1; i >= 0; i--) {
+      const p = airplane.trailX[i];
+      p.life -= 0.005;
+      if (p.life <= 0) { airplane.trailX.splice(i, 1); continue; }
+      px(p.x, p.y + 2, 2, 1, rgba(200, 210, 220, p.life * 0.2 * dayAmt));
+    }
+    if (airplane.trailX.length > 200) airplane.trailX.splice(0, airplane.trailX.length - 200);
+    // draw plane body
+    const ax = airplane.x, ay = airplane.y;
+    if (ax > -30 && ax < W + 30) {
+      if (dayAmt > 0.2) {
+        // day: white plane
+        px(ax, ay, 8 * airplane.dir, 2, rgb(220, 220, 230), 0.9);
+        px(ax + 2 * airplane.dir, ay - 2, 3 * airplane.dir, 2, rgb(210, 210, 220), 0.7);
+      } else {
+        // night: blinking lights
+        const blink = Math.sin(airplane.blinkPhase) > 0.3 ? 0.9 : 0.2;
+        px(ax, ay, 6 * airplane.dir, 2, rgb(30, 30, 40), 0.5);
+        px(ax, ay, 2, 2, rgba(255, 50, 50, blink));
+        px(ax + 4 * airplane.dir, ay, 2, 2, rgba(80, 255, 80, blink * 0.7));
       }
-      b.life -= 0.002;
-      b.extra += 0.15;
-      b.vx += (Math.random() - 0.5) * 0.15;
-      b.vy += (Math.random() - 0.5) * 0.1;
-      b.vx *= 0.95; b.vy *= 0.95;
-      b.x += b.vx; b.y += b.vy;
-      if (b.x < 0 || b.x > W || b.y < 0 || b.y > H) { b.life = 0; continue; }
-      const wing = Math.abs(Math.sin(b.extra));
-      const colors = ['#ff8844','#ffdd44','#88ccff','#ff88cc'];
-      const col = colors[b.extra2 % 4];
-      px(b.x - wing * 3, b.y, wing * 2, 2, col, dayAmt * 0.6);
-      px(b.x + 1, b.y, wing * 2, 2, col, dayAmt * 0.6);
-      px(b.x, b.y, 1, 2, rgb(40, 30, 20), dayAmt * 0.7);
-      activeParticles++;
     }
-  }
-
-  // === RAIN + RAINBOW STATE MACHINE ===
-  function updateRainRainbow(seaY, dayAmt, t) {
-    if (dayAmt < 0.3) { rainState = 'clear'; return; }
-    switch (rainState) {
-      case 'clear':
-        if (Math.random() < 0.0002) { rainState = 'rain'; rainTimer = 300; } // 5s at 60fps
-        break;
-      case 'rain':
-        rainTimer--;
-        // spawn rain drops
-        if (!isMobile && activeParticles < MAX_PARTICLES) {
-          for (let i = 0; i < 3; i++) {
-            rainParticles.push({ x: Math.random() * W, y: -4, vy: 3 + Math.random() * 2, life: 1 });
-          }
-        }
-        if (rainTimer <= 0) { rainState = 'rainbow'; rainTimer = 180; rainbowAlpha = 0; }
-        break;
-      case 'rainbow':
-        rainTimer--;
-        rainbowAlpha = rainTimer > 90 ? Math.min(1, rainbowAlpha + 0.02) : Math.max(0, rainbowAlpha - 0.015);
-        if (rainTimer <= 0) { rainState = 'clear'; rainbowAlpha = 0; }
-        break;
-    }
-    // draw rain
-    for (let i = rainParticles.length - 1; i >= 0; i--) {
-      const r = rainParticles[i];
-      r.y += r.vy; r.life -= 0.01;
-      if (r.y > seaY || r.life <= 0) { rainParticles.splice(i, 1); continue; }
-      px(r.x, r.y, 1, 4, rgba(180, 200, 220, dayAmt * 0.3));
-      activeParticles++;
-    }
-    if (rainParticles.length > 60) rainParticles.splice(0, rainParticles.length - 60);
-    // draw rainbow
-    if (rainbowAlpha > 0.01) {
-      ctx.save();
-      ctx.globalAlpha = rainbowAlpha * 0.12 * dayAmt;
-      const rcx = W * 0.5, rcy = seaY;
-      const rainbowColors = ['#ff0000','#ff8800','#ffff00','#00ff00','#0088ff','#4400ff','#8800ff'];
-      for (let i = 0; i < 7; i++) {
-        ctx.beginPath();
-        ctx.arc(rcx, rcy, 120 + i * 6, Math.PI, 0);
-        ctx.strokeStyle = rainbowColors[i];
-        ctx.lineWidth = 4;
-        ctx.stroke();
-      }
-      ctx.restore();
+    if ((airplane.dir > 0 && airplane.x > W + 60) || (airplane.dir < 0 && airplane.x < -60)) {
+      airplane = null;
     }
   }
 
   // === HOT AIR BALLOON ===
-  function updateBalloon(dayAmt, t) {
-    if (dayAmt < 0.3) { balloon.active = false; return; }
-    if (!balloon.active) {
-      balloon.timer--;
-      if (balloon.timer <= 0 && Math.random() < 0.001) {
-        balloon.active = true; balloon.x = -0.05; balloon.y = 0.08 + Math.random() * 0.06;
-      }
-      return;
+  let balloon = { x: W * 0.6, y: H * 0.15, phase: Math.random() * Math.PI * 2, vx: 0.05 };
+
+  function drawBalloon(dayAmt, t) {
+    if (dayAmt < 0.2) return;
+    balloon.x += balloon.vx + Math.sin(t * 0.005) * 0.05;
+    balloon.y += Math.sin(t * 0.008 + balloon.phase) * 0.15;
+    if (balloon.x > W + 30) balloon.x = -20;
+    const bx = balloon.x, by = balloon.y;
+    // balloon envelope (pixel art)
+    const envR = [220, 60, 40], envG = [80, 160, 180], envB = [40, 220, 220];
+    const stripeH = 3;
+    for (let s = 0; s < 3; s++) {
+      const sy = by - 9 + s * stripeH;
+      const w = s === 1 ? 10 : 8;
+      const xOff = s === 1 ? -1 : 0;
+      px(bx + xOff, sy, w, stripeH, rgb(envR[s], envG[s], envB[s]), dayAmt * 0.85);
     }
-    balloon.x += 0.0003;
-    if (balloon.x > 1.1) { balloon.active = false; balloon.timer = 600; return; }
-    const bx = balloon.x * W, by = balloon.y * H + Math.sin(time * 0.01) * 3;
-    // shadow on ground (very subtle)
-    px(bx - 3, H * 0.52, 6, 2, rgba(0, 0, 0, dayAmt * 0.04));
-    // envelope — layered for rounded look
-    px(bx - 5, by - 14, 10, 10, rgba(215, 45, 45, dayAmt * 0.85));
-    px(bx - 6, by - 11, 12, 6, rgba(210, 50, 50, dayAmt * 0.85));
-    px(bx - 4, by - 17, 8, 4, rgba(230, 65, 55, dayAmt * 0.8));
-    px(bx - 3, by - 19, 6, 3, rgba(240, 80, 60, dayAmt * 0.7));
-    // stripes (white and gold)
-    px(bx - 5, by - 12, 10, 2, rgba(255, 255, 255, dayAmt * 0.5));
-    px(bx - 5, by - 8, 10, 2, rgba(255, 220, 60, dayAmt * 0.55));
-    // highlight (sunlit side)
-    px(bx - 6, by - 13, 2, 8, rgba(255, 255, 255, dayAmt * 0.12));
-    // basket
-    px(bx - 3, by + 1, 6, 4, rgba(130, 90, 40, dayAmt * 0.75));
-    px(bx - 2, by + 1, 4, 1, rgba(160, 120, 60, dayAmt * 0.6)); // basket rim
+    // top cap
+    px(bx + 1, by - 11, 6, 2, rgb(envR[0], envG[0], envB[0]), dayAmt * 0.85);
     // ropes
-    px(bx - 4, by - 3, 1, 5, rgba(90, 70, 35, dayAmt * 0.45));
-    px(bx + 3, by - 3, 1, 5, rgba(90, 70, 35, dayAmt * 0.45));
-    // flame flicker
-    if (Math.sin(time * 0.15) > 0) {
-      px(bx - 1, by - 1, 2, 2, rgba(255, 180, 50, dayAmt * 0.4));
-    }
-    activeParticles++;
+    px(bx + 1, by, 1, 4, rgb(100, 80, 60), dayAmt * 0.6);
+    px(bx + 6, by, 1, 4, rgb(100, 80, 60), dayAmt * 0.6);
+    // basket
+    px(bx + 1, by + 4, 6, 3, rgb(140, 100, 50), dayAmt * 0.8);
+    px(bx + 2, by + 4, 4, 1, rgb(170, 130, 70), dayAmt * 0.6);
   }
 
-  // === NEON BUILDING OUTLINES ===
-  function drawNeonOutlines(shoreTop, mx) {
-    if (nightIntensity <= 0) return;
-    const ox = mx * W * 0.03;
-    const snap = v => Math.round(v / PX) * PX || PX;
-    for (let i = 0; i < buildings.length; i++) {
-      const b = buildings[i];
-      const bw = snap(b.wFrac * W);
-      const bh = snap(b.hFrac * H);
-      const bx = Math.floor(b.x * W + ox);
-      const by = Math.floor(shoreTop - bh);
-      const col = neonPalette[i % 4];
-      const pulse = Math.sin(time * 0.02 + i * 0.7) * 0.1 + 0.9;
-      const a = nightIntensity * 0.3 * pulse;
-      // soft outer glow (2px wider)
-      px(bx - 1, by - 1, bw + 2, 1, col, a * 0.15);
-      px(bx - 1, by - 1, 1, bh + 2, col, a * 0.12);
-      px(bx + bw, by - 1, 1, bh + 2, col, a * 0.12);
-      // sharp outline
-      px(bx, by, bw, 1, col, a);
-      px(bx, by, 1, bh, col, a * 0.8);
-      px(bx + bw - 1, by, 1, bh, col, a * 0.8);
-      px(bx, by + bh - 1, bw, 1, col, a * 0.5);
-      // roofline glow halo
-      if (bh > 30 && !lowPerf) {
-        const halo = ctx.createRadialGradient(bx + bw/2, by, 2, bx + bw/2, by, bw * 0.8);
-        halo.addColorStop(0, col);
-        halo.addColorStop(1, 'transparent');
-        ctx.save(); ctx.globalAlpha = a * 0.06;
-        ctx.fillStyle = halo;
-        ctx.fillRect(bx - bw * 0.3, by - bw * 0.5, bw * 1.6, bw);
-        ctx.restore();
-      }
-    }
-  }
+  // === FISH / DOLPHINS ===
+  const jumpingFish = [];
+  let nextFishJump = 300 + Math.random() * 500;
 
-  // === NEON SIGNS ===
-  function drawNeonSignsFunc(shoreTop, mx, t) {
-    if (nightIntensity <= 0.05) return;
-    const ox = mx * W * 0.03;
-    const snap = v => Math.round(v / PX) * PX || PX;
-    for (const s of neonSigns) {
-      // activation logic (dusk transition)
-      if (duskProgress > 0 && duskProgress >= s.activateAt) s.active = true;
-      if (dawnProgress > 0 && dawnProgress >= (1 - s.offDelay)) {
-        if (Math.random() < 0.02) s.active = false;
+  function updateFish(seaY, t) {
+    if (t > nextFishJump && jumpingFish.length < 2) {
+      const startX = W * (0.25 + Math.random() * 0.5);
+      const dir = Math.random() > 0.5 ? 1 : -1;
+      jumpingFish.push({
+        x: startX, y: seaY, startY: seaY,
+        vx: dir * (0.8 + Math.random() * 0.5),
+        vy: -(2.5 + Math.random() * 1.5),
+        phase: 0, splashLife: 0
+      });
+      nextFishJump = t + 400 + Math.random() * 600;
+    }
+    for (let i = jumpingFish.length - 1; i >= 0; i--) {
+      const f = jumpingFish[i];
+      f.x += f.vx;
+      f.y += f.vy;
+      f.vy += 0.08; // gravity
+      f.phase++;
+      // draw fish (pixel arc)
+      if (f.y < f.startY) {
+        const angle = Math.atan2(f.vy, f.vx);
+        const cos = Math.cos(angle), sin = Math.sin(angle);
+        // body
+        px(f.x, f.y, 4, 2, rgb(80, 140, 180), 0.9);
+        // tail
+        px(f.x - 3 * (f.vx > 0 ? 1 : -1), f.y - 1, 2, 3, rgb(60, 120, 160), 0.7);
+        // splash droplets when entering/exiting water
+        if (f.phase < 5 || (f.y > f.startY - 8 && f.vy > 0)) {
+          for (let d = 0; d < 3; d++) {
+            px(f.x + (Math.random() - 0.5) * 12, f.startY - Math.random() * 8,
+              2, 2, rgba(150, 200, 230, 0.5));
+          }
+        }
       }
-      if (nightIntensity > 0.8) s.active = true;
-      if (nightIntensity <= 0.05) s.active = false;
-      if (!s.active) continue;
-      const b = buildings[s.bIdx];
-      if (!b) continue;
-      const bw = snap(b.wFrac * W);
-      const bh = snap(b.hFrac * H);
-      const bx = Math.floor(b.x * W + ox);
-      const by = Math.floor(shoreTop - bh);
-      // flicker with realistic buzzing
-      const flicker = Math.sin(t * s.flickerSpeed + s.flickerPhase);
-      const buzz = Math.sin(t * 0.5 + s.flickerPhase * 3) * 0.05; // high-freq buzz
-      const flickerA = flicker > (raveMode ? -0.8 : -0.15) ? 1 : 0.15;
-      // rave mode: cycle colors wildly
-      const activeColor = raveMode ? neonPalette[Math.floor(t * 0.2 + s.flickerPhase) % 4] : s.color;
-      if (raveMode) s.flickerPhase += 0.3;
-      const a = nightIntensity * flickerA * 0.85 + buzz;
-      const sx = bx + 2, sy = by + Math.floor(bh * 0.3);
-      const sw = Math.min(s.w, bw - 4);
-      // main sign body
-      px(sx, sy, sw, s.h, activeColor, a);
-      // bright inner core
-      px(sx + 1, sy, sw - 2, s.h, '#fff', a * 0.2);
-      // multi-layer glow
-      if (a > 0.3 && !lowPerf) {
-        px(sx - 1, sy - 1, sw + 2, s.h + 2, activeColor, a * 0.15);
-        px(sx - 3, sy - 2, sw + 6, s.h + 4, activeColor, a * 0.05);
-        // radial glow halo
-        const halo = ctx.createRadialGradient(sx + sw/2, sy + s.h/2, 1, sx + sw/2, sy + s.h/2, sw);
-        halo.addColorStop(0, activeColor);
-        halo.addColorStop(1, 'transparent');
-        ctx.save(); ctx.globalAlpha = a * 0.08;
-        ctx.fillStyle = halo;
-        ctx.fillRect(sx - sw/2, sy - sw/2, sw * 2, sw);
-        ctx.restore();
-      }
+      // remove when back in water
+      if (f.y > f.startY + 5) { jumpingFish.splice(i, 1); }
     }
   }
 
-  // === LED STRIPS ===
-  function drawLEDStrips(shoreTop, mx, t) {
-    if (nightIntensity <= 0.2) return;
-    const ox = mx * W * 0.03;
-    const snap = v => Math.round(v / PX) * PX || PX;
-    const tallBuildings = buildings.slice(-6);
-    for (let i = 0; i < tallBuildings.length; i++) {
-      const b = tallBuildings[i];
-      const bw = snap(b.wFrac * W);
-      const bh = snap(b.hFrac * H);
-      const bx = Math.floor(b.x * W + ox);
-      const by = Math.floor(shoreTop - bh);
-      const col = neonPalette[(i + 1) % 4];
-      // vertical scrolling LED strip — both edges for taller buildings
-      const stripXL = bx + 1;
-      const stripXR = bx + bw - 2;
-      for (let y = 0; y < bh; y += 3) {
-        const scrollY = (y + t * (0.4 + i * 0.1)) % bh;
-        const wave = Math.sin(scrollY * 0.1) * 0.5 + 0.5;
-        const bright = wave > 0.6 ? 1 : 0.15;
-        px(stripXR, by + y, 1, 2, col, nightIntensity * bright * 0.55);
-        // second strip on left edge for tall buildings
-        if (bh > 40) {
-          const scrollY2 = (y + t * 0.3 + bh * 0.5) % bh;
-          const wave2 = Math.sin(scrollY2 * 0.12) * 0.5 + 0.5;
-          px(stripXL, by + y, 1, 2, neonPalette[(i + 2) % 4], nightIntensity * (wave2 > 0.6 ? 0.45 : 0.1));
+  // === WATER GLINTS (sun/moon path) ===
+  function drawWaterGlints(seaY, cyclePhase, t) {
+    const sunVisible = cyclePhase > 0.28 && cyclePhase < 0.78;
+    const moonVisible = cyclePhase < 0.2 || cyclePhase > 0.85;
+    if (!sunVisible && !moonVisible) return;
+
+    let lightX, lightColor, intensity;
+    if (sunVisible) {
+      const sunPhase = (cyclePhase - 0.28) / 0.5;
+      lightX = W * (0.1 + sunPhase * 0.8);
+      lightColor = [255, 240, 180];
+      intensity = Math.sin(sunPhase * Math.PI) * 0.4;
+    } else {
+      lightX = W * 0.75;
+      lightColor = [180, 200, 220];
+      intensity = 0.15;
+    }
+    // sparkle path on water
+    for (let row = 0; row < 20; row++) {
+      const gy = seaY + 4 + row * 5;
+      const spread = row * 3;
+      for (let s = 0; s < 3; s++) {
+        const gx = lightX + (Math.random() - 0.5) * spread * 2 + Math.sin(t * 0.03 + row + s) * 4;
+        const flicker = Math.sin(t * 0.1 + row * 2.3 + s * 5.7) * 0.5 + 0.5;
+        if (flicker > 0.4) {
+          px(gx, gy, 2, 1, rgba(lightColor[0], lightColor[1], lightColor[2], intensity * flicker));
         }
       }
     }
   }
 
-  // === BIOLUMINESCENT PLANKTON ===
-  function updatePlankton(seaY, t) {
-    if (nightIntensity <= 0.2) return;
-    for (const p of planktonPool) {
-      if (p.life <= 0) {
-        if (Math.random() < 0.05 && activeParticles < MAX_PARTICLES) {
-          p.life = 1; p.x = W * (0.2 + Math.random() * 0.6);
-          p.y = seaY + 5 + Math.random() * (H - seaY - 20);
-          p.extra = Math.random() * Math.PI * 2; // phase
-        }
-        continue;
-      }
-      p.life -= 0.003;
-      p.extra += 0.02;
-      p.x += Math.sin(p.extra) * 0.2;
-      p.y += Math.cos(p.extra * 0.7) * 0.1;
-      const pulse = (Math.sin(p.extra * 2) * 0.5 + 0.5);
-      const a = nightIntensity * p.life * pulse * 0.7;
-      // color varies between cyan-green and blue-green
-      const hueShift = Math.sin(p.extra * 0.5) * 0.5 + 0.5;
-      const pr = Math.round(hueShift * 30);
-      const pg = Math.round(200 + hueShift * 55);
-      const pb = Math.round(140 + (1 - hueShift) * 80);
-      px(p.x, p.y, 2, 2, rgba(pr, pg, pb, a));
-      // soft glow around each dot
-      if (pulse > 0.6 && !lowPerf) {
-        px(p.x - 1, p.y - 1, 4, 4, rgba(pr, pg, pb, a * 0.15));
-      }
-      activeParticles++;
-    }
-    // Bio explosion easter egg
-    if (bioExplosion) {
-      bioExpTimer--;
-      if (bioExpTimer <= 0) { bioExplosion = false; return; }
-      const progress = 1 - bioExpTimer / 120;
-      const radius = progress * 80;
-      for (let angle = 0; angle < Math.PI * 2; angle += 0.2) {
-        const ex = bioExpX + Math.cos(angle) * radius + (Math.random() - 0.5) * 8;
-        const ey = bioExpY + Math.sin(angle) * radius * 0.5 + (Math.random() - 0.5) * 4;
-        if (ey > seaY) {
-          px(ex, ey, 2, 2, rgba(0, 255, 180, (1 - progress) * nightIntensity * 0.7));
-        }
+  // === RAINBOW ===
+  function drawRainbow(cyclePhase, t) {
+    // rainbow appears briefly after "rain" (cycle phase ~0.38-0.45 — morning after sunrise)
+    const showStart = 0.38, showEnd = 0.46;
+    if (cyclePhase < showStart || cyclePhase > showEnd) return;
+    const fade = cyclePhase < (showStart + 0.02) ? (cyclePhase - showStart) / 0.02
+                : cyclePhase > (showEnd - 0.02) ? (showEnd - cyclePhase) / 0.02 : 1;
+    const colors = [
+      [255, 0, 0], [255, 127, 0], [255, 255, 0],
+      [0, 200, 0], [0, 0, 255], [75, 0, 130], [148, 0, 211]
+    ];
+    const cx = W * 0.5, cy = H * 0.55;
+    for (let c = 0; c < colors.length; c++) {
+      const r = W * 0.32 - c * 4;
+      const col = colors[c];
+      for (let a = 0; a < Math.PI; a += 0.03) {
+        const rx = cx + Math.cos(a) * r;
+        const ry = cy - Math.sin(a) * r * 0.6;
+        if (ry > H * 0.5) continue;
+        px(rx, ry, 3, 3, rgba(col[0], col[1], col[2], fade * 0.12));
       }
     }
   }
 
-  // === NEON BUOYS ===
-  function drawNeonBuoys(seaY, t) {
-    if (nightIntensity <= 0.2) return;
-    const positions = [0.28, 0.50, 0.72];
-    for (let i = 0; i < 3; i++) {
-      const bx = W * positions[i];
-      const bob = Math.sin(t * 0.02 + i * 2) * 2;
-      const by = seaY + 8 + bob;
-      const pulse = Math.sin(t * 0.04 + i * 1.5) * 0.5 + 0.5;
-      const col = neonPalette[i % 4];
-      // buoy body
-      px(bx - 2, by, 4, 4, rgba(60, 60, 70, nightIntensity * 0.7));
-      // neon ring
-      px(bx - 2, by + 1, 4, 1, col, nightIntensity * (0.4 + pulse * 0.5));
-      // top beacon
-      px(bx - 1, by - 1, 2, 1, col, nightIntensity * (0.5 + pulse * 0.5));
-      // radial glow
-      if (!lowPerf) {
-        const glow = ctx.createRadialGradient(bx, by + 1, 1, bx, by + 1, 12);
-        glow.addColorStop(0, col);
+  // === AMBIENT FIREWORKS (night) ===
+  const ambientFireworks = [];
+  let nextFirework = 500;
+
+  function updateAmbientFireworks(dayAmt, t) {
+    if (dayAmt > 0.3) { ambientFireworks.length = 0; return; }
+    const nightIntensity = 1 - dayAmt / 0.3;
+    // spawn new firework
+    if (t > nextFirework && ambientFireworks.length < 30) {
+      const fx = W * (0.25 + Math.random() * 0.5);
+      const fy = H * (0.1 + Math.random() * 0.2);
+      const colors = [[255, 80, 80], [80, 255, 120], [80, 180, 255], [255, 200, 60], [255, 100, 200]];
+      const col = colors[Math.floor(Math.random() * colors.length)];
+      const count = 12 + Math.floor(Math.random() * 8);
+      for (let p = 0; p < count; p++) {
+        const angle = (p / count) * Math.PI * 2;
+        const speed = 0.8 + Math.random() * 0.8;
+        ambientFireworks.push({
+          x: fx, y: fy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+          life: 1, color: col, gravity: 0.015 + Math.random() * 0.01
+        });
+      }
+      nextFirework = t + 180 + Math.random() * 300;
+    }
+    for (let i = ambientFireworks.length - 1; i >= 0; i--) {
+      const p = ambientFireworks[i];
+      p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.vx *= 0.98; p.life -= 0.015;
+      if (p.life <= 0) { ambientFireworks.splice(i, 1); continue; }
+      px(p.x, p.y, 2, 2, rgba(p.color[0], p.color[1], p.color[2], p.life * nightIntensity * 0.8));
+      // trailing glow
+      if (p.life > 0.4) px(p.x - p.vx, p.y - p.vy, 1, 1, rgba(p.color[0], p.color[1], p.color[2], p.life * 0.3 * nightIntensity));
+    }
+  }
+
+  // === CARS ON WATERFRONT ===
+  const cars = [];
+  for (let i = 0; i < 3; i++) {
+    cars.push({
+      x: Math.random() * W, dir: Math.random() > 0.5 ? 1 : -1,
+      speed: 0.3 + Math.random() * 0.3,
+      color: [[200, 50, 40], [40, 80, 200], [220, 200, 50], [50, 180, 80], [200, 200, 210]][Math.floor(Math.random() * 5)],
+      hasLights: true
+    });
+  }
+
+  function drawCars(shoreTop, dayAmt, mx, t) {
+    const ox = mx * W * 0.03;
+    const roadY = shoreTop + 1; // on the light strip (road)
+    for (const c of cars) {
+      c.x += c.speed * c.dir;
+      // wrap around within city bounds
+      if (c.dir > 0 && c.x > W * 0.78 + ox) c.x = W * 0.22 + ox;
+      if (c.dir < 0 && c.x < W * 0.22 + ox) c.x = W * 0.78 + ox;
+      const cx = c.x;
+      // car body (6x3 pixels)
+      const cr = Math.round(lerpVal(c.color[0] * 0.15, c.color[0], Math.max(0.15, dayAmt)));
+      const cg = Math.round(lerpVal(c.color[1] * 0.15, c.color[1], Math.max(0.15, dayAmt)));
+      const cb = Math.round(lerpVal(c.color[2] * 0.15, c.color[2], Math.max(0.15, dayAmt)));
+      px(cx, roadY - 3, 6, 3, rgb(cr, cg, cb), 0.9);
+      // roof
+      px(cx + 1, roadY - 5, 4, 2, rgb(Math.max(0,cr-20), Math.max(0,cg-20), Math.max(0,cb-20)), 0.85);
+      // wheels
+      px(cx, roadY, 2, 1, rgb(30, 30, 30));
+      px(cx + 4, roadY, 2, 1, rgb(30, 30, 30));
+      // headlights at night
+      if (dayAmt < 0.4) {
+        const lightX = c.dir > 0 ? cx + 6 : cx - 2;
+        px(lightX, roadY - 2, 2, 1, rgba(255, 240, 180, 0.8));
+        // light beam
+        const beamLen = 12;
+        for (let b = 0; b < beamLen; b++) {
+          px(lightX + b * c.dir * 1.5, roadY - 2, 1, 1, rgba(255, 240, 150, 0.15 * (1 - b/beamLen)));
+        }
+        // tail lights
+        const tailX = c.dir > 0 ? cx : cx + 5;
+        px(tailX, roadY - 2, 1, 1, rgba(255, 30, 30, 0.7));
+      }
+    }
+  }
+
+  // === NEON SIGNS ON BUILDINGS ===
+  const neonSigns = [];
+  // pick 3 buildings for neon signs
+  const neonBuildings = buildings.filter(b => b.hFrac > 0.05 && b.wFrac > 0.015).sort(() => Math.random() - 0.5).slice(0, 3);
+  const neonTexts = ['CAFE', 'BAR', 'HOTEL'];
+  const neonColors = [[255, 60, 100], [60, 255, 180], [100, 150, 255]];
+  neonBuildings.forEach((b, idx) => {
+    neonSigns.push({ building: b, text: neonTexts[idx], color: neonColors[idx], flickerPhase: Math.random() * 100 });
+  });
+
+  function drawNeonSigns(seaY, dayAmt, mx, t) {
+    if (dayAmt > 0.35) return; // neon only at night/dusk
+    const nightIntensity = Math.min(1, (0.35 - dayAmt) / 0.2);
+    const ox = mx * W * 0.03;
+    for (const sign of neonSigns) {
+      const b = sign.building;
+      const bw = Math.round(b.wFrac * W / PX) * PX || PX;
+      const bh = Math.round(b.hFrac * H / PX) * PX || PX;
+      const bx = b.x * W + ox;
+      const by = seaY - bh;
+      // position sign on upper third of building
+      const signY = by + bh * 0.2;
+      const signX = bx + 2;
+      // flicker effect
+      sign.flickerPhase += 0.07;
+      const flicker = Math.sin(sign.flickerPhase) > -0.3 ? 1 : 0.2;
+      const fIntense = Math.sin(sign.flickerPhase * 0.3) > 0.7 ? 0.4 : 1; // occasional dim
+      const alpha = nightIntensity * flicker * fIntense * 0.85;
+      const col = sign.color;
+      // draw each letter as 3x4 pixel blocks
+      const letterW = 3, letterH = 4, gap = 1;
+      for (let i = 0; i < sign.text.length; i++) {
+        const lx = signX + i * (letterW + gap);
+        px(lx, signY, letterW, letterH, rgba(col[0], col[1], col[2], alpha));
+      }
+      // glow halo around sign
+      if (alpha > 0.3) {
+        const glowW = sign.text.length * (letterW + gap) + 6;
+        const glow = ctx.createRadialGradient(signX + glowW/2, signY + 2, 2, signX + glowW/2, signY + 2, glowW);
+        glow.addColorStop(0, rgba(col[0], col[1], col[2], alpha * 0.08));
         glow.addColorStop(1, 'transparent');
-        ctx.save(); ctx.globalAlpha = nightIntensity * pulse * 0.08;
         ctx.fillStyle = glow;
-        ctx.fillRect(bx - 12, by - 11, 24, 24);
-        ctx.restore();
-      }
-      // water glow
-      px(bx - 5, by + 4, 10, 2, col, nightIntensity * pulse * 0.12);
-    }
-  }
-
-  // === DIGITAL GRID SKY OVERLAY ===
-  function drawDigitalGrid(dayAmt, t) {
-    if (isMobile || nightIntensity <= 0.4) return;
-    ctx.save();
-    ctx.globalAlpha = nightIntensity * 0.04;
-    ctx.strokeStyle = rgba(0, 200, 255, 1);
-    ctx.lineWidth = 0.5;
-    const gridSize = 40;
-    for (let x = (t * 0.2) % gridSize; x < W; x += gridSize) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H * 0.45); ctx.stroke();
-    }
-    for (let y = 0; y < H * 0.45; y += gridSize) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  // === VHS GLITCH ===
-  function drawVHSGlitch() {
-    if (isMobile || nightIntensity <= 0.3) return;
-    if (vhsGlitchTimer <= 0) {
-      if (Math.random() < 0.003 * nightIntensity) {
-        vhsGlitchTimer = 6;
-        vhsSlices = [];
-        const count = 2 + Math.floor(Math.random() * 3);
-        for (let i = 0; i < count; i++) {
-          vhsSlices.push({
-            y: Math.floor(Math.random() * H),
-            h: 2 + Math.floor(Math.random() * 6),
-            offset: (Math.random() - 0.5) * 12
-          });
-        }
-      }
-      return;
-    }
-    vhsGlitchTimer--;
-    // Draw glitch by offsetting horizontal slices
-    for (const s of vhsSlices) {
-      const imgData = ctx.getImageData(0, s.y, W, s.h);
-      ctx.putImageData(imgData, s.offset, s.y);
-    }
-  }
-
-  // === PATROL DRONES ===
-  function updatePatrolDrones(dayAmt, t) {
-    if (nightIntensity <= 0.3) return;
-    for (const d of dronePool) {
-      if (d.life <= 0) {
-        if (Math.random() < 0.002 && duskProgress > 0.5 && activeParticles < MAX_PARTICLES) {
-          d.life = 1; d.x = Math.random() * W;
-          d.y = H * (0.06 + Math.random() * 0.15);
-          d.vx = (Math.random() - 0.5) * 1.2;
-          d.vy = 0;
-          d.extra = Math.random() * Math.PI * 2; // zigzag phase
-        }
-        continue;
-      }
-      d.life -= 0.001;
-      d.extra += 0.03;
-      d.x += d.vx;
-      d.y += Math.sin(d.extra) * 0.3;
-      if (d.x < -20 || d.x > W + 20) { d.life = 0; continue; }
-      // drone body
-      px(d.x - 3, d.y, 6, 2, rgba(60, 60, 80, nightIntensity * 0.8));
-      // blinking lights
-      const blink = Math.sin(t * 0.15 + d.x) > 0;
-      px(d.x - 2, d.y + 2, 2, 1, rgba(255, 0, 0, blink ? nightIntensity * 0.8 : 0.1));
-      px(d.x + 1, d.y + 2, 2, 1, rgba(0, 200, 255, blink ? 0.1 : nightIntensity * 0.8));
-      // searchlight cone
-      if (Math.sin(t * 0.02 + d.x * 0.1) > 0.5) {
-        ctx.save();
-        ctx.globalAlpha = nightIntensity * 0.03;
-        ctx.beginPath();
-        ctx.moveTo(d.x - 1, d.y + 3);
-        ctx.lineTo(d.x + 1, d.y + 3);
-        ctx.lineTo(d.x + 8, d.y + 40);
-        ctx.lineTo(d.x - 8, d.y + 40);
-        ctx.closePath();
-        ctx.fillStyle = '#00d4ff';
-        ctx.fill();
-        ctx.restore();
-      }
-      activeParticles++;
-    }
-  }
-
-  // === STEAM VENTS ===
-  function updateSteamVents(shoreTop, mx, t) {
-    if (nightIntensity <= 0.2) return;
-    const ox = mx * W * 0.03;
-    for (const s of steamPool) {
-      if (s.life <= 0) {
-        if (Math.random() < 0.02 * nightIntensity && activeParticles < MAX_PARTICLES) {
-          // spawn between buildings
-          const bIdx = Math.floor(Math.random() * (buildings.length - 1));
-          const b1 = buildings[bIdx], b2 = buildings[bIdx + 1];
-          s.life = 1;
-          s.x = ((b1.x + b2.x) / 2) * W + ox;
-          s.y = shoreTop - 2;
-          s.vy = -0.4 - Math.random() * 0.3;
-          s.vx = (Math.random() - 0.5) * 0.3;
-          s.extra = 2 + Math.floor(Math.random() * 2); // size
-        }
-        continue;
-      }
-      s.life -= 0.012; s.y += s.vy; s.x += s.vx;
-      s.vx += (Math.random() - 0.5) * 0.05;
-      const a = s.life * nightIntensity * 0.25;
-      // steam picks up neon color tint from nearby buildings
-      const tintIdx = Math.floor(s.x / (W / 4)) % 4;
-      const tints = [[220,200,230],[200,220,240],[210,230,220],[230,210,220]];
-      const st = tints[tintIdx];
-      px(s.x, s.y, s.extra, s.extra, rgba(st[0], st[1], st[2], a));
-      // faint neon backlight on steam
-      if (s.life > 0.7) {
-        px(s.x - 1, s.y, s.extra + 2, s.extra, neonPalette[tintIdx], a * 0.08);
-      }
-      activeParticles++;
-    }
-  }
-
-  // === MYSTERIOUS FIGURE ===
-  function drawMysteriousFigure(shoreTop, mx) {
-    if (nightIntensity <= 0.4) { mystFigure.visible = false; return; }
-    if (!mystFigure.visible && Math.random() < 0.0005 * nightIntensity) mystFigure.visible = true;
-    if (!mystFigure.visible && !mystFigure.jumping) return;
-    const ox = mx * W * 0.03;
-    const snap = v => Math.round(v / PX) * PX || PX;
-    const b = buildings[mystFigure.bIdx];
-    if (!b) return;
-    const bw = snap(b.wFrac * W);
-    const bh = snap(b.hFrac * H);
-    const bx = Math.floor(b.x * W + ox);
-    const by = Math.floor(shoreTop - bh);
-    let fx = bx + bw / 2 - 2, fy = by - 8;
-    // jumping animation
-    if (mystFigure.jumping) {
-      mystFigure.jumpVY += 0.15;
-      mystFigure.jumpY += mystFigure.jumpVY;
-      const tb = buildings[mystFigure.targetBIdx];
-      if (tb) {
-        const tbh = snap(tb.hFrac * H);
-        const targetY = shoreTop - tbh - 8;
-        fx = lerpVal(bx + bw/2 - 2, Math.floor(tb.x * W + ox) + snap(tb.wFrac * W)/2 - 2, Math.min(1, mystFigure.jumpY / 40));
-        fy = by - 8 + mystFigure.jumpY + mystFigure.jumpVY * -2;
-        if (fy >= targetY && mystFigure.jumpVY > 0) {
-          mystFigure.jumping = false;
-          mystFigure.bIdx = mystFigure.targetBIdx;
-          mystFigure.jumpY = 0;
-        }
-      }
-    }
-    // silhouette (4x8) with cloak flutter
-    const flutter = Math.sin(time * 0.06) * 1;
-    px(fx, fy, 4, 2, rgba(8, 8, 14, nightIntensity * 0.95)); // head
-    px(fx - 1, fy + 2, 6, 4, rgba(8, 8, 14, nightIntensity * 0.9)); // body
-    px(fx - 1 + flutter, fy + 4, 2, 3, rgba(12, 10, 18, nightIntensity * 0.7)); // cloak edge
-    px(fx, fy + 6, 2, 2, rgba(10, 10, 15, nightIntensity * 0.85)); // legs
-    px(fx + 2, fy + 6, 2, 2, rgba(10, 10, 15, nightIntensity * 0.85));
-    // glowing eyes (pulsing red with halo)
-    const eyePulse = Math.sin(time * 0.05) * 0.3 + 0.7;
-    px(fx + 1, fy + 1, 1, 1, rgba(255, 20, 20, nightIntensity * 0.85 * eyePulse));
-    px(fx + 3, fy + 1, 1, 1, rgba(255, 20, 20, nightIntensity * 0.7 * eyePulse));
-    // eye glow halo
-    if (!lowPerf) {
-      px(fx, fy, 5, 2, rgba(255, 0, 0, nightIntensity * 0.04 * eyePulse));
-    }
-    // store screen position for click detection
-    mystFigure.screenX = fx; mystFigure.screenY = fy;
-  }
-
-  // === NEON AURORA ===
-  function drawNeonAurora(t) {
-    if (nightIntensity <= 0.3) return;
-    ctx.save();
-    const baseY = H * 0.03;
-    // multiple shimmering bands with smooth color transitions
-    for (let i = 0; i < 5; i++) {
-      const bandY = baseY + i * 5 + Math.sin(t * 0.008 + i * 0.8) * 3;
-      const grad = ctx.createLinearGradient(0, bandY, W, bandY);
-      const shift = (t * 0.0008 + i * 0.25) % 1;
-      // smooth 5-stop gradient for rich aurora look
-      grad.addColorStop(((0 + shift) % 1), 'rgba(255,45,107,0.8)');
-      grad.addColorStop(((0.25 + shift) % 1), 'rgba(0,212,255,0.9)');
-      grad.addColorStop(((0.5 + shift) % 1), 'rgba(191,0,255,0.7)');
-      grad.addColorStop(((0.75 + shift) % 1), 'rgba(57,255,20,0.6)');
-      grad.addColorStop(((0.98 + shift) % 1), 'rgba(255,45,107,0.5)');
-      const bandA = nightIntensity * (0.025 + Math.sin(t * 0.005 + i * 1.5) * 0.01);
-      ctx.globalAlpha = bandA;
-      ctx.fillStyle = grad;
-      const bandH = 4 + Math.sin(t * 0.006 + i) * 2;
-      ctx.fillRect(0, bandY, W, bandH);
-    }
-    ctx.restore();
-  }
-
-  // === NEON MOTORCYCLE ===
-  function updateNeonMotorcycle(shoreTop, mx, t) {
-    if (nightIntensity <= 0.3) { neonMoto.active = false; return; }
-    const ox = mx * W * 0.03;
-    const roadY = shoreTop + 1;
-    if (!neonMoto.active) {
-      if (Math.random() < 0.001 * nightIntensity) {
-        neonMoto.active = true;
-        neonMoto.dir = Math.random() > 0.5 ? 1 : -1;
-        neonMoto.x = neonMoto.dir > 0 ? W * 0.20 : W * 0.80;
-        neonMoto.trail = [];
-      }
-      return;
-    }
-    neonMoto.x += neonMoto.dir * 1.2;
-    if (neonMoto.x < W * 0.18 || neonMoto.x > W * 0.82) { neonMoto.active = false; return; }
-    const mx2 = neonMoto.x + ox;
-    const fwd2 = neonMoto.dir > 0;
-    // rider silhouette
-    px(mx2 + 1, roadY - 8, 3, 3, rgba(20, 20, 25, nightIntensity * 0.85));
-    // body (8x3)
-    px(mx2, roadY - 5, 8, 3, rgba(25, 25, 35, nightIntensity * 0.9));
-    // chrome accent
-    px(mx2 + (fwd2 ? 5 : 1), roadY - 5, 2, 1, rgba(150, 150, 170, nightIntensity * 0.5));
-    // wheels
-    px(mx2 + 1, roadY - 2, 2, 2, rgba(40, 40, 50, nightIntensity * 0.8));
-    px(mx2 + 5, roadY - 2, 2, 2, rgba(40, 40, 50, nightIntensity * 0.8));
-    // neon underglow (pink + blue mix)
-    px(mx2 - 1, roadY - 1, 10, 1, '#ff2d6b', nightIntensity * 0.7);
-    px(mx2, roadY, 8, 1, '#ff2d6b', nightIntensity * 0.2); // ground reflection
-    // headlight beam
-    const hlDir = fwd2 ? 1 : -1;
-    px(mx2 + (fwd2 ? 8 : -4), roadY - 4, 4, 1, rgba(255, 255, 230, nightIntensity * 0.6));
-    // trail with fade
-    neonMoto.trail.push({ x: mx2, y: roadY - 1 });
-    if (neonMoto.trail.length > 12) neonMoto.trail.shift();
-    for (let i = 0; i < neonMoto.trail.length; i++) {
-      const tp = neonMoto.trail[i];
-      const trailA = (i / neonMoto.trail.length) * nightIntensity * 0.5;
-      px(tp.x, tp.y, 4, 1, '#ff2d6b', trailA);
-      px(tp.x + 1, tp.y + 1, 2, 1, '#ff2d6b', trailA * 0.3); // reflection
-    }
-    activeParticles++;
-  }
-
-  // === DAWN REBOOT GLITCH ===
-  function drawRebootGlitch() {
-    if (!rebootGlitch) return;
-    rebootTimer--;
-    if (rebootTimer <= 0) { rebootGlitch = false; return; }
-    // full screen glitch effect
-    ctx.save();
-    ctx.globalAlpha = 0.15;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, W, H);
-    // glitch lines
-    for (let i = 0; i < 5; i++) {
-      const y = Math.random() * H;
-      ctx.fillStyle = neonPalette[Math.floor(Math.random() * 4)];
-      ctx.fillRect(0, y, W, 2);
-    }
-    ctx.restore();
-  }
-
-  // === KONAMI CODE MATRIX RAIN ===
-  let matrixColumns = [];
-  function initMatrix() {
-    const mc = document.getElementById('matrix-canvas');
-    mc.width = window.innerWidth; mc.height = window.innerHeight;
-    matrixColumns = [];
-    const cols = Math.floor(mc.width / 14);
-    for (let i = 0; i < cols; i++) {
-      matrixColumns.push({ x: i * 14, y: Math.random() * -mc.height, speed: 2 + Math.random() * 4, chars: [] });
-      for (let j = 0; j < 30; j++) matrixColumns[i].chars.push(String.fromCharCode(0x30A0 + Math.random() * 96));
-    }
-  }
-  function drawMatrix() {
-    if (!matrixRainActive) return;
-    matrixTimer--;
-    if (matrixTimer <= 0) { matrixRainActive = false; document.getElementById('matrix-overlay').classList.remove('active'); return; }
-    const mc = document.getElementById('matrix-canvas');
-    const mctx = mc.getContext('2d');
-    mctx.fillStyle = 'rgba(0,0,0,0.05)';
-    mctx.fillRect(0, 0, mc.width, mc.height);
-    mctx.font = '12px monospace';
-    for (const col of matrixColumns) {
-      col.y += col.speed;
-      if (col.y > mc.height + 400) col.y = Math.random() * -200;
-      for (let j = 0; j < col.chars.length; j++) {
-        const cy = col.y + j * 14;
-        if (cy < 0 || cy > mc.height) continue;
-        const fade = j === 0 ? 1 : Math.max(0.1, 1 - j * 0.05);
-        mctx.fillStyle = j === 0 ? '#fff' : `rgba(57,255,20,${fade})`;
-        if (Math.random() < 0.02) col.chars[j] = String.fromCharCode(0x30A0 + Math.random() * 96);
-        mctx.fillText(col.chars[j], col.x, cy);
+        ctx.fillRect(signX - 8, signY - 8, glowW + 16, 20);
       }
     }
   }
-
-  // === HACK TERMINAL ===
-  const hackLines = [
-    '> INITIALIZING BREACH PROTOCOL...',
-    '> SCANNING PORTS 1-65535...',
-    '> FOUND: SSH(22) HTTP(80) HTTPS(443)',
-    '> BYPASSING FIREWALL...',
-    '> INJECTING PAYLOAD...',
-    '> DECRYPTING DATABASE...',
-    '> [████████████████████] 100%',
-    '',
-    '> ACCESS GRANTED',
-    '> WELCOME, HACKER.'
-  ];
-  let hackLineIdx = 0, hackCharIdx = 0, hackText = '';
-  function updateHackTerminal() {
-    if (!hackActive) return;
-    hackTimer--;
-    if (hackTimer <= 0) {
-      hackActive = false;
-      document.getElementById('hack-overlay').classList.remove('active');
-      hackLineIdx = 0; hackCharIdx = 0; hackText = '';
-      return;
-    }
-    if (hackLineIdx < hackLines.length) {
-      const line = hackLines[hackLineIdx];
-      if (hackCharIdx < line.length) {
-        hackText += line[hackCharIdx];
-        hackCharIdx++;
-      } else {
-        hackText += '\n';
-        hackLineIdx++;
-        hackCharIdx = 0;
-      }
-      document.getElementById('hack-terminal').textContent = hackText + '█';
-    }
-  }
-
-  // === NEON DRAG TRAILS (easter egg) ===
-  function drawNeonDragTrails() {
-    for (let i = neonDragTrail.length - 1; i >= 0; i--) {
-      const p = neonDragTrail[i];
-      p.life--;
-      if (p.life <= 0) { neonDragTrail.splice(i, 1); continue; }
-      const a = (p.life / 60) * nightIntensity * 0.6;
-      px(p.x, p.y, 3, 3, p.color, a);
-    }
-  }
-
-  // === EASTER EGG EVENT LISTENERS ===
-  // Konami code
-  document.addEventListener('keydown', e => {
-    konamiSeq.push(e.keyCode);
-    if (konamiSeq.length > 10) konamiSeq.shift();
-    if (konamiSeq.length === 10 && konamiSeq.every((k, i) => k === konamiCode[i])) {
-      konamiSeq = [];
-      matrixRainActive = true;
-      matrixTimer = 600; // 10s
-      initMatrix();
-      document.getElementById('matrix-overlay').classList.add('active');
-    }
-  });
-
-  // Type "hack"
-  let hackBuffer = '';
-  document.addEventListener('keypress', e => {
-    hackBuffer += e.key.toLowerCase();
-    if (hackBuffer.length > 10) hackBuffer = hackBuffer.slice(-10);
-    if (hackBuffer.endsWith('hack') && !hackActive) {
-      hackActive = true;
-      hackTimer = 480; // 8s
-      hackText = ''; hackLineIdx = 0; hackCharIdx = 0;
-      document.getElementById('hack-overlay').classList.add('active');
-    }
-  });
-
-  // Water hold for bioluminescent explosion
-  let waterMouseDown = false, waterMouseDownTime = 0;
-  heroEl.addEventListener('mousedown', e => {
-    const rect = canvas.getBoundingClientRect();
-    const cy = (e.clientY - rect.top) / rect.height;
-    if (cy > 0.55 && nightIntensity > 0.3) {
-      waterMouseDown = true;
-      waterMouseDownTime = performance.now();
-      waterHoldActive = true;
-    }
-  });
-  heroEl.addEventListener('mouseup', e => {
-    if (waterHoldActive && waterMouseDown) {
-      const held = performance.now() - waterMouseDownTime;
-      if (held > 3000 && nightIntensity > 0.3) {
-        const rect = canvas.getBoundingClientRect();
-        bioExplosion = true;
-        bioExpX = e.clientX - rect.left;
-        bioExpY = e.clientY - rect.top;
-        bioExpTimer = 120;
-      }
-    }
-    waterMouseDown = false; waterHoldActive = false;
-  });
-
-  // Click mysterious figure → jump
-  heroEl.addEventListener('click', e => {
-    if (!mystFigure.visible || mystFigure.jumping || nightIntensity <= 0.4) return;
-    const rect = canvas.getBoundingClientRect();
-    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
-    if (mystFigure.screenX && Math.abs(cx - mystFigure.screenX) < 15 && Math.abs(cy - mystFigure.screenY) < 15) {
-      mystFigure.jumping = true;
-      mystFigure.jumpVY = -4;
-      mystFigure.jumpY = 0;
-      // pick a different building
-      let newIdx = mystFigure.bIdx;
-      while (newIdx === mystFigure.bIdx) newIdx = buildings.length - 1 - Math.floor(Math.random() * 4);
-      mystFigure.targetBIdx = newIdx;
-    }
-  });
-
-  // Triple-click neon sign → rave mode
-  heroEl.addEventListener('click', e => {
-    if (nightIntensity <= 0.3 || raveMode) return;
-    const now = performance.now();
-    neonSignClicks.push(now);
-    neonSignClicks = neonSignClicks.filter(t => now - t < 800);
-    if (neonSignClicks.length >= 3) {
-      raveMode = true; raveTimer = 300; // 5s
-      neonSignClicks = [];
-    }
-  });
-
-  // Drag sky at night → neon trails
-  heroEl.addEventListener('mousemove', e => {
-    if (nightIntensity <= 0.2 || e.buttons !== 1) return;
-    const rect = canvas.getBoundingClientRect();
-    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
-    if (cy < H * 0.45 && neonDragTrail.length < 20) {
-      neonDragTrail.push({ x: cx, y: cy, life: 60, color: neonPalette[Math.floor(Math.random() * 4)] });
-    }
-  });
 
   // === MAIN LOOP ===
   function frame() {
-    // FPS monitoring
-    const now = performance.now();
-    deltaTime = now - lastFrameTime;
-    lastFrameTime = now;
-    fpsAccum += 1000 / Math.max(1, deltaTime);
-    fpsCount++;
-    if (fpsCount >= 30) { avgFps = fpsAccum / fpsCount; fpsAccum = 0; fpsCount = 0; lowPerf = avgFps < 30; }
-    activeParticles = 0; // reset budget each frame
-
     time++;
     ctx.clearRect(0, 0, W, H);
 
-    const cyclePhase = (time / 60 / CYCLE_DURATION) % 1;
+    const cyclePhase = window.__manualCyclePhase != null ? window.__manualCyclePhase : (time / 60 / CYCLE_DURATION) % 1;
     const sky = getSkyColors(cyclePhase);
     const daytime = isDaytime(cyclePhase);
     const dayAmount = Math.max(0, Math.min(1, cyclePhase < 0.5 ? (cyclePhase - 0.2) / 0.25 : (0.85 - cyclePhase) / 0.25));
     const starAlpha = cyclePhase < 0.25 || cyclePhase > 0.8 ? 1 : cyclePhase < 0.4 ? Math.max(0, 1-(cyclePhase-0.25)/0.15) : cyclePhase > 0.65 ? Math.min(1,(cyclePhase-0.65)/0.15) : 0;
     const mx = (mouseX - 0.5);
     const my = (mouseY - 0.5);
-
-    // Derived phase vars
-    nightIntensity = Math.max(0, (0.4 - dayAmount) / 0.4);
-    duskProgress = cyclePhase >= 0.65 && cyclePhase <= 0.80 ? Math.min(1, (cyclePhase - 0.65) / 0.15) : 0;
-    dawnProgress = cyclePhase >= 0.25 && cyclePhase <= 0.35 ? Math.min(1, (cyclePhase - 0.25) / 0.10) : 0;
-
-    // Rave mode timer
-    if (raveMode) { raveTimer--; if (raveTimer <= 0) raveMode = false; }
-
-    // CRT intensity toggle
-    if (nightIntensity > 0.5 && !heroEl.classList.contains('crt-intense')) heroEl.classList.add('crt-intense');
-    else if (nightIntensity <= 0.5 && heroEl.classList.contains('crt-intense')) heroEl.classList.remove('crt-intense');
-
-    // Dawn reboot glitch trigger
-    if (dawnProgress > 0.9 && dawnProgress < 0.98 && !rebootGlitch && Math.random() < 0.01) {
-      rebootGlitch = true; rebootTimer = 8;
-    }
 
     // sky gradient
     const grad = ctx.createLinearGradient(0, 0, 0, H * 0.65);
@@ -2576,26 +2395,20 @@
       }
     }
 
-    // digital grid sky overlay (night)
-    drawDigitalGrid(dayAmount, time);
-
-    // neon aurora above city (night)
-    drawNeonAurora(time);
-
     // shooting stars (night only)
     updateShootingStars(starAlpha, time);
 
     // clouds (behind mountains)
     drawClouds(dayAmount, mx, time);
 
-    // god rays from sun (day)
-    drawGodRays(cyclePhase, dayAmount);
+    // rainbow (appears briefly in morning phase)
+    drawRainbow(cyclePhase, time);
 
-    // hot air balloon (day)
-    updateBalloon(dayAmount, time);
+    // airplane
+    updateAirplane(dayAmount, starAlpha, time);
 
-    // V-formation birds (day)
-    updateBirds(dayAmount, time);
+    // bird flocks (V-formation)
+    drawBirdFlocks(dayAmount, time);
 
     // === LANDSCAPE ===
     const seaY = H * 0.55;
@@ -2647,8 +2460,8 @@
       drawTree(tx, ty, tr.size, tr.type, dayAmount);
     }
 
-    // butterflies near hills (day)
-    updateButterflies(dayAmount, mx, time);
+    // hot air balloon (floats above mountains, day only)
+    drawBalloon(dayAmount, time);
 
     // ground/shore strip — wide enough so buildings sit fully on land
     const shoreTop = seaY - 6;
@@ -2673,26 +2486,17 @@
 
     if (shakeOffset > 0.1) ctx.restore();
 
-    // neon building outlines (night)
-    drawNeonOutlines(shoreTop, mx);
+    // neon signs on buildings (night only)
+    drawNeonSigns(shoreTop, dayAmount, mx, time);
 
-    // neon signs (night)
-    drawNeonSignsFunc(shoreTop, mx, time);
+    // cars on the waterfront road
+    drawCars(shoreTop, dayAmount, mx, time);
 
-    // LED strips (night)
-    drawLEDStrips(shoreTop, mx, time);
-
-    // chimney smoke (day)
+    // chimney smoke from buildings
     updateSmoke(shoreTop, mx, dayAmount, time);
-
-    // mysterious figure (night)
-    drawMysteriousFigure(shoreTop, mx);
 
     // waterfront lanterns (night only)
     drawLanterns(shoreTop, dayAmount, mx);
-
-    // steam vents (night)
-    updateSteamVents(shoreTop, mx, time);
 
     // sea
     drawSea(seaY, cyclePhase, time, mx);
@@ -2700,20 +2504,17 @@
     // water reflections
     drawWaterReflection(seaY, dayAmount, mx, time);
 
-    // bioluminescent plankton (night)
-    updatePlankton(seaY, time);
+    // water glints (sun/moon path)
+    drawWaterGlints(seaY, cyclePhase, time);
 
-    // neon buoys (night)
-    drawNeonBuoys(seaY, time);
-
-    // dolphins (day)
-    updateDolphins(seaY, dayAmount, time);
-
-    // rain + rainbow (day)
-    updateRainRainbow(seaY, dayAmount, time);
+    // fish / dolphins jumping
+    updateFish(seaY, time);
 
     // sailboat
     drawSailboat(seaY, cyclePhase, time, mx);
+
+    // ambient fireworks (night)
+    updateAmbientFireworks(dayAmount, time);
 
     // UFO (easter egg)
     drawUFO(time);
@@ -2735,30 +2536,6 @@
         px(gx, gy, 2, 1, rgb(gc,gc,gc), dayAmount * 0.7);
       }
     }
-
-    // pixel cars on road (day)
-    updateCars(shoreTop, mx, time, dayAmount);
-
-    // neon motorcycle (night)
-    updateNeonMotorcycle(shoreTop, mx, time);
-
-    // patrol drones (night)
-    updatePatrolDrones(dayAmount, time);
-
-    // VHS glitch (night, draw last before overlays)
-    drawVHSGlitch();
-
-    // dawn reboot glitch
-    drawRebootGlitch();
-
-    // neon drag trails (easter egg)
-    drawNeonDragTrails();
-
-    // matrix rain
-    drawMatrix();
-
-    // hack terminal
-    updateHackTerminal();
 
     // mouse trail
     const dx = mouseX - prevMouseX, dy = mouseY - prevMouseY;
@@ -2809,12 +2586,13 @@
 (function() {
   const fade = document.getElementById('hero-fade');
   const hero = document.getElementById('hero');
+  const hint = document.querySelector('.scroll-hint');
   window.addEventListener('scroll', () => {
     const scrollY = window.scrollY;
     const heroH = hero.offsetHeight;
-    // start fading at 30% scroll, fully dark at 90%
     const progress = Math.max(0, Math.min(1, (scrollY / heroH - 0.15) / 0.45));
     fade.style.opacity = progress;
+    if (hint) hint.style.opacity = Math.max(0, 1 - scrollY / 80);
   }, { passive: true });
 })();
 
@@ -2856,17 +2634,29 @@ async function loadRepos() {
     repos = repos.filter(r => !r.fork && r.name !== 'veloxico-site').sort((a, b) => b.stargazers_count - a.stargazers_count).slice(0, 12);
     if (!repos.length) { grid.innerHTML = '<div class="projects-loading">NO REPOS YET</div>'; return; }
 
-    grid.innerHTML = repos.map(r => {
+    grid.innerHTML = repos.map((r, idx) => {
       const lc = LANG_COLORS[r.language] || '#888';
       const rawDesc = r.description || 'No description';
-      const desc = rawDesc.length > 90 ? rawDesc.slice(0, 87) + '...' : rawDesc;
+      const isFeatured = idx === 0;
+      const desc = isFeatured ? rawDesc : (rawDesc.length > 90 ? rawDesc.slice(0, 87) + '...' : rawDesc);
       const safeUrl = r.html_url.startsWith('https://github.com/') ? r.html_url : '#';
-      return `<a class="project-card" href="${escHtml(safeUrl)}" target="_blank" rel="noopener">
-        <div class="project-name">${escHtml(r.name)}</div>
-        <div class="project-desc">${escHtml(desc)}</div>
-        <div class="project-meta">
-          ${r.language ? `<span class="project-lang"><span class="lang-dot" style="background:${escHtml(lc)}"></span>${escHtml(r.language)}</span>` : ''}
-          ${r.stargazers_count > 0 ? `<span class="project-stars">★ ${r.stargazers_count}</span>` : ''}
+      return `<a class="project-card${isFeatured ? ' featured' : ''}" href="${escHtml(safeUrl)}" target="_blank" rel="noopener">
+        <div class="project-card-header">
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot"></span>
+          <span class="terminal-dot-label">${escHtml(r.language || 'repo')}</span>
+        </div>
+        <div class="project-card-body">
+          <div>
+            <div class="project-name">${escHtml(r.name)}</div>
+            <div class="project-desc">${escHtml(desc)}</div>
+            <div class="project-meta">
+              ${r.language ? `<span class="project-lang"><span class="lang-dot" style="background:${escHtml(lc)};color:${escHtml(lc)}"></span>${escHtml(r.language)}</span>` : ''}
+              ${r.stargazers_count > 0 ? `<span class="project-stars">★ ${r.stargazers_count}</span>` : ''}
+            </div>
+          </div>
+          ${isFeatured ? '<span class="featured-badge">FEATURED</span>' : ''}
         </div>
       </a>`;
     }).join('');
@@ -2941,7 +2731,7 @@ loadRepos();
 /* ===== ROTATING BIO WITH DECODE EFFECT ===== */
 (function() {
   const phrases = [
-    'DevOps by day, vibe-coder by night',
+    'DevOps by day, deep-coder by night',
     'Automating the boring stuff since day one',
     'Writing code my future self will understand',
     'Exit code 0 is my love language',
@@ -3022,6 +2812,234 @@ function copyAddr(el) {
     setTimeout(() => { el.textContent = orig; el.classList.remove('copied'); }, 1500);
   });
 }
+
+/* ===== PIXEL AVATAR ===== */
+(function() {
+  const c = document.getElementById('avatar-canvas');
+  if (!c) return;
+  const x = c.getContext('2d');
+  // pixel art face
+  const d = [
+    '..gggg..............',
+    '.gggggg.............',
+    'gggggggg............',
+    'gggggggg............',
+    '.gggggg.............',
+    '..ssss..............',
+    '.ssssss.............',
+    '.s.ss.s.............',
+    '.ssssss.............',
+    '..smms..............',
+    '..ssss..............',
+    '...ss...............',
+    '..cccc..............',
+    '.cccccc.............',
+    '.cccccc.............',
+    'cc.cc.cc............',
+    '...pp...............',
+    '...pp...............',
+    '..p..p..............',
+    '..p..p..............',
+  ];
+  const colors = { g: '#4a3728', s: '#f0c090', m: '#d4956b', c: '#2a5a8a', p: '#1a1a35' };
+  d.forEach((row, y) => { for (let i = 0; i < 20; i++) { if (row[i] && row[i] !== '.') { x.fillStyle = colors[row[i]] || '#000'; x.fillRect(i, y, 1, 1); } } });
+})();
+
+/* ===== SKILL BARS ANIMATION ===== */
+(function() {
+  const bars = document.getElementById('skill-bars');
+  if (!bars) return;
+  const obs = new IntersectionObserver(([e]) => {
+    if (e.isIntersecting) {
+      bars.querySelectorAll('.skill-fill').forEach(f => { f.style.width = f.dataset.width + '%'; });
+      obs.disconnect();
+    }
+  }, { threshold: 0.3 });
+  obs.observe(bars);
+})();
+
+/* ===== STATS COUNTER ===== */
+(function() {
+  const bar = document.getElementById('stats-bar');
+  if (!bar) return;
+  const obs = new IntersectionObserver(([e]) => {
+    if (e.isIntersecting) {
+      bar.querySelectorAll('.stat-item').forEach((item, i) => {
+        setTimeout(() => item.classList.add('visible'), i * 150);
+      });
+      // animate numbers
+      bar.querySelectorAll('.stat-num').forEach(el => {
+        const target = parseInt(el.dataset.target) || 0;
+        if (!target) return;
+        let cur = 0;
+        const step = Math.max(1, Math.floor(target / 30));
+        const iv = setInterval(() => {
+          cur = Math.min(cur + step, target);
+          el.textContent = cur;
+          if (cur >= target) clearInterval(iv);
+        }, 40);
+      });
+      obs.disconnect();
+    }
+  }, { threshold: 0.5 });
+  obs.observe(bar);
+})();
+
+/* ===== POPULATE STATS FROM GITHUB DATA ===== */
+(function() {
+  // wait for repos to load, then update stats
+  const origLoad = window.loadRepos;
+  if (!origLoad) return;
+  const grid = document.getElementById('projects-grid');
+  const mo = new MutationObserver(() => {
+    const cards = grid.querySelectorAll('.project-card');
+    if (!cards.length) return;
+    mo.disconnect();
+    // fetch stats from API
+    fetch('https://api.github.com/users/veloxico/repos?per_page=30').then(r => r.json()).then(repos => {
+      repos = repos.filter(r => !r.fork);
+      const totalStars = repos.reduce((s, r) => s + r.stargazers_count, 0);
+      const langs = new Set(repos.map(r => r.language).filter(Boolean));
+      const sr = document.getElementById('stat-repos');
+      const ss = document.getElementById('stat-stars');
+      const sl = document.getElementById('stat-langs');
+      if (sr) sr.dataset.target = repos.length;
+      if (ss) ss.dataset.target = totalStars;
+      if (sl) sl.dataset.target = langs.size;
+    }).catch(() => {});
+  });
+  mo.observe(grid, { childList: true });
+})();
+
+/* ===== GITHUB HEATMAP ===== */
+(function() {
+  const grid = document.getElementById('heatmap-grid');
+  if (!grid) return;
+  // generate 12 weeks × 7 days of simulated activity
+  const rng = (function(s) { return function() { s=(s*9301+49297)%233280; return s/233280; }; })(Date.now() % 1000);
+  for (let w = 0; w < 12; w++) {
+    for (let d = 0; d < 7; d++) {
+      const cell = document.createElement('div');
+      cell.className = 'heatmap-cell';
+      const v = rng();
+      if (v > 0.75) cell.classList.add('l4');
+      else if (v > 0.55) cell.classList.add('l3');
+      else if (v > 0.35) cell.classList.add('l2');
+      else if (v > 0.2) cell.classList.add('l1');
+      grid.appendChild(cell);
+    }
+  }
+})();
+
+/* ===== MINI TERMINAL ===== */
+(function() {
+  const input = document.getElementById('terminal-input');
+  const output = document.getElementById('terminal-output');
+  if (!input || !output) return;
+
+  const commands = {
+    help: 'Available: <span class="cmd">help</span> | <span class="cmd">whoami</span> | <span class="cmd">projects</span> | <span class="cmd">contact</span> | <span class="cmd">skills</span> | <span class="cmd">clear</span>',
+    whoami: 'DevOps engineer, open-source builder, pixel-art enthusiast. Based on the Mediterranean coast.',
+    projects: '<span class="cmd">wikso</span> — Confluence alternative (TypeScript)<br><span class="cmd">lockso</span> — Password manager (TypeScript)',
+    contact: 'GitHub: <span class="cmd">github.com/veloxico</span><br>LinkedIn: <span class="cmd">linkedin.com/in/okosenko</span>',
+    skills: 'DevOps ████████░░ 92%<br>Backend ████████░░ 85%<br>Frontend ██████░░░░ 65%<br>Security ███████░░░ 78%',
+    clear: '__CLEAR__',
+  };
+
+  input.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const cmd = input.value.trim().toLowerCase();
+    input.value = '';
+    if (!cmd) return;
+
+    const echo = document.createElement('div');
+    echo.innerHTML = '<span class="cmd">&gt; ' + escHtml(cmd) + '</span>';
+    output.appendChild(echo);
+
+    const resp = commands[cmd];
+    if (resp === '__CLEAR__') {
+      output.innerHTML = '';
+      return;
+    }
+    const line = document.createElement('div');
+    line.innerHTML = resp || '<span class="err">command not found: ' + escHtml(cmd) + '</span>';
+    output.appendChild(line);
+    output.scrollTop = output.scrollHeight;
+  });
+})();
+
+/* ===== DAY/NIGHT TOGGLE ===== */
+(function() {
+  const btn = document.getElementById('cycle-toggle');
+  if (!btn) return;
+  const sunSvg = '<svg viewBox="0 0 16 16" fill="none"><rect x="6" y="1" width="4" height="2" fill="#ffdd33"/><rect x="1" y="6" width="2" height="4" fill="#ffdd33"/><rect x="13" y="6" width="2" height="4" fill="#ffdd33"/><rect x="6" y="13" width="4" height="2" fill="#ffdd33"/><rect x="5" y="5" width="6" height="6" fill="#ffdd33"/></svg>';
+  const moonSvg = '<svg viewBox="0 0 16 16" fill="none"><rect x="5" y="2" width="6" height="2" fill="#aabbcc"/><rect x="3" y="4" width="4" height="2" fill="#aabbcc"/><rect x="3" y="6" width="2" height="4" fill="#aabbcc"/><rect x="5" y="10" width="2" height="2" fill="#aabbcc"/><rect x="7" y="12" width="6" height="2" fill="#aabbcc"/><rect x="11" y="4" width="2" height="8" fill="#aabbcc"/></svg>';
+  const autoSvg = '<svg viewBox="0 0 16 16" fill="none"><rect x="3" y="3" width="2" height="10" fill="#00ff88"/><rect x="5" y="3" width="2" height="2" fill="#00ff88"/><rect x="7" y="3" width="2" height="10" fill="#00ff88"/><rect x="5" y="7" width="2" height="2" fill="#00ff88"/><rect x="11" y="3" width="2" height="10" fill="#00ff88"/><rect x="11" y="3" width="2" height="2" fill="#00ff88"/></svg>';
+  // states: 0=auto, 1=day, 2=night
+  let state = 0;
+  btn.title = 'Auto cycle (click to pin day)';
+  btn.addEventListener('click', () => {
+    state = (state + 1) % 3;
+    if (state === 1) {
+      // pin to day
+      window.__manualCyclePhase = 0.5;
+      btn.innerHTML = sunSvg;
+      btn.title = 'Day mode (click for night)';
+    } else if (state === 2) {
+      // pin to night
+      window.__manualCyclePhase = 0.0;
+      btn.innerHTML = moonSvg;
+      btn.title = 'Night mode (click for auto)';
+    } else {
+      // auto cycle
+      window.__manualCyclePhase = null;
+      btn.innerHTML = autoSvg;
+      btn.title = 'Auto cycle (click to pin day)';
+    }
+  });
+})();
+
+/* ===== FEATURED PROJECT CARD ===== */
+// handled in loadRepos template — see project-card.featured class
+
+/* ===== CUSTOM PIXEL CURSOR ===== */
+(function() {
+  document.querySelector('.page-body')?.classList.add('pixel-cursor');
+})();
+
+/* ===== PARALLAX ON SCROLL ===== */
+(function() {
+  const sections = document.querySelectorAll('section, .heatmap-section, .stats-bar');
+  window.addEventListener('scroll', () => {
+    const sy = window.scrollY;
+    sections.forEach(s => {
+      const rect = s.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) {
+        const offset = (rect.top / window.innerHeight - 0.5) * 15;
+        s.style.transform = 'translateY(' + offset + 'px)';
+      }
+    });
+  }, { passive: true });
+})();
+
+/* ===== BOOT SEQUENCE ===== */
+(function() {
+  const boot = document.getElementById('boot-screen');
+  const crt = document.getElementById('crt-on');
+  if (!boot) return;
+  const lines = boot.querySelectorAll('.boot-line');
+  lines.forEach(line => {
+    const delay = parseInt(line.dataset.delay) || 0;
+    setTimeout(() => line.classList.add('show'), delay);
+  });
+  const totalTime = Math.max(...[...lines].map(l => parseInt(l.dataset.delay) || 0)) + 600;
+  setTimeout(() => {
+    crt.classList.add('flash');
+    boot.classList.add('off');
+    document.body.classList.remove('booting');
+    setTimeout(() => { boot.remove(); crt.remove(); }, 500);
+  }, totalTime);
+})();
 </script>
 
 </body>
