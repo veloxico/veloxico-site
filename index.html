@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-J940RY2KET"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-J940RY2KET');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>veloxico — projects</title>
@@ -1327,31 +1335,146 @@
   }
 
   // === DRAW MOUNTAINS ===
-  function drawMountainLayer(profile, baseY, color, shadowColor, mx, parallax, pixSize, dayAmt) {
+  function drawMountainLayer(profile, baseY, color, shadowColor, mx, parallax, pixSize, dayAmt, opts) {
+    opts = opts || {};
     const ox = mx * W * parallax;
-    ctx.fillStyle = color;
     const colW = Math.max(pixSize, Math.ceil(W * 1.3 / profile.length) + 1);
+
+    // parse base color
+    const cMatch = color.match(/\d+/g);
+    const baseR = +cMatch[0], baseG = +cMatch[1], baseB = +cMatch[2];
+
+    // find the exact peak position for snow on the left mountain
+    let peakH = 0;
+    for (const p of profile) { if (p.y > peakH) peakH = p.y; }
+    // find peak of leftmost mountain only (x: 0.05-0.24)
+    let localPeakH = 0, localPeakX = 0;
+    for (const p of profile) { if (p.x > 0.05 && p.x < 0.24 && p.y > localPeakH) { localPeakH = p.y; localPeakX = p.x; } }
+    const snowRadius = 0.05;
+    const snowThreshold = localPeakH * 0.93;
+
     for (let i = 0; i < profile.length - 1; i++) {
       const p = profile[i];
+      const next = profile[Math.min(i + 1, profile.length - 1)];
+      const prev = profile[Math.max(i - 1, 0)];
       const screenX = p.x * W + ox;
       const h = p.y * H * 0.8;
-      if (h > 0) {
-        ctx.fillRect(Math.floor(screenX), Math.floor(baseY - h), colW, Math.ceil(h));
+      if (h <= 0) continue;
+
+      const topY = Math.floor(baseY - h);
+
+      // === DIRECTIONAL SUNLIGHT ===
+      // slope: positive = going up (left-lit), negative = going down (shadow)
+      const slope = next.y - prev.y;
+      let lightMod = 0;
+      if (dayAmt > 0.2) {
+        // sunlit side (left face = slope going up)
+        lightMod = Math.max(-0.3, Math.min(0.3, slope * 8)) * dayAmt;
+      }
+
+      const lr = Math.min(255, Math.max(0, baseR + Math.round(lightMod * 60)));
+      const lg = Math.min(255, Math.max(0, baseG + Math.round(lightMod * 50)));
+      const lb = Math.min(255, Math.max(0, baseB + Math.round(lightMod * 30)));
+
+      // main fill
+      ctx.fillStyle = rgb(lr, lg, lb);
+      ctx.fillRect(Math.floor(screenX), topY, colW, Math.ceil(h));
+
+      // === SNOW CAP (thin cap on the very peak) ===
+      if (opts.snow && localPeakH > 0 && p.y > snowThreshold && Math.abs(p.x - localPeakX) < snowRadius) {
+        const peakProximity = (p.y - snowThreshold) / (localPeakH - snowThreshold + 0.001);
+        const distFromCenter = Math.abs(p.x - localPeakX) / snowRadius;
+        const edgeFade = 1 - distFromCenter * distFromCenter; // fade at edges of cap
+        const snowDepth = Math.max(PX, Math.round(peakProximity * edgeFade * PX * 4));
+        const snowR = Math.round(lerpVal(180, 248, dayAmt));
+        const snowG = Math.round(lerpVal(185, 250, dayAmt));
+        const snowB = Math.round(lerpVal(200, 255, dayAmt));
+        const snowAlpha = (0.7 + dayAmt * 0.25) * edgeFade;
+        if (snowDepth >= PX && snowAlpha > 0.1)
+          px(screenX, topY, colW, snowDepth, rgb(snowR, snowG, snowB), snowAlpha);
+      }
+
+      // === SHADOW on downslope ===
+      if (slope < -0.003 && dayAmt > 0.1) {
+        const shadowA = Math.min(0.25, Math.abs(slope) * 5) * dayAmt;
+        px(screenX, topY, colW, Math.ceil(h), rgba(0, 0, 20, shadowA));
       }
     }
-    // shadow on right side
-    if (shadowColor) {
-      ctx.fillStyle = shadowColor;
-      for (let i = 0; i < profile.length - 1; i++) {
-        const p = profile[i];
-        const next = profile[Math.min(i+1, profile.length-1)];
-        if (next.y < p.y) {
-          const screenX = p.x * W + ox;
-          const h = p.y * H * 0.8;
-          ctx.fillRect(Math.floor(screenX), Math.floor(baseY - h), colW, Math.ceil(h * 0.3));
+
+    // === ATMOSPHERIC HAZE ===
+    if (opts.haze) {
+      const hazeAmount = opts.haze; // 0..1
+      // gradient from base upward
+      const hazeH = Math.round(H * 0.15 * hazeAmount);
+      if (hazeH > 2) {
+        const hazeR = Math.round(lerpVal(15, 140, dayAmt));
+        const hazeG = Math.round(lerpVal(18, 160, dayAmt));
+        const hazeB = Math.round(lerpVal(35, 200, dayAmt));
+        for (let row = 0; row < hazeH; row += PX) {
+          const t = row / hazeH;
+          const alpha = (1 - t) * hazeAmount * 0.35;
+          px(0, baseY - row, W, PX, rgba(hazeR, hazeG, hazeB, alpha));
         }
       }
     }
+  }
+
+  // === WATERFALL ===
+  // place waterfall on mid mountain at a specific peak
+  const waterfallX = 0.72; // x position on mid mountain
+  const waterfallParticles = [];
+
+  function drawWaterfall(seaY, dayAmt, mx, t) {
+    const ox = mx * W * 0.03;
+    // find height at waterfall position
+    const normalizedX = (waterfallX + 0.15) / 1.3;
+    const idx = Math.floor(normalizedX * (midMtnProfile.length - 1));
+    const hillH = midMtnProfile[idx] ? midMtnProfile[idx].y * H * 0.8 : 0;
+    if (hillH < 20) return;
+
+    const wx = waterfallX * W + ox;
+    const topY = seaY + 10 - hillH + hillH * 0.3; // start at 30% from peak
+    const botY = seaY + 10 - 4; // near the base
+    const fallH = botY - topY;
+
+    // water stream (animated white/blue pixels falling down)
+    const streamW = 2;
+    const segments = Math.floor(fallH / 4);
+    for (let s = 0; s < segments; s++) {
+      const sy = topY + s * 4;
+      const wobble = Math.sin(t * 0.1 + s * 0.8) * 1;
+      const alpha = (0.3 + Math.sin(t * 0.05 + s * 0.3) * 0.15) * Math.max(0.2, dayAmt);
+      px(wx + wobble, sy, streamW, 4,
+        rgba(200, 220, 240, alpha));
+      // white highlights
+      if (Math.sin(t * 0.15 + s * 1.3) > 0.6) {
+        px(wx + wobble, sy, 1, 2, rgba(240, 250, 255, alpha * 0.8));
+      }
+    }
+
+    // splash at bottom
+    if (t % 4 === 0) {
+      for (let d = 0; d < 2; d++) {
+        waterfallParticles.push({
+          x: wx + (Math.random() - 0.5) * 6,
+          y: botY,
+          vx: (Math.random() - 0.5) * 0.8,
+          vy: -(0.5 + Math.random() * 0.8),
+          life: 1
+        });
+      }
+    }
+    for (let i = waterfallParticles.length - 1; i >= 0; i--) {
+      const p = waterfallParticles[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.04; p.life -= 0.03;
+      if (p.life <= 0) { waterfallParticles.splice(i, 1); continue; }
+      px(p.x, p.y, 1, 1, rgba(200, 230, 250, p.life * 0.4 * Math.max(0.2, dayAmt)));
+    }
+    if (waterfallParticles.length > 30) waterfallParticles.splice(0, waterfallParticles.length - 30);
+
+    // mist at base
+    const mistAlpha = Math.sin(t * 0.02) * 0.05 + 0.08;
+    px(wx - 6, botY - 3, 14, 4, rgba(200, 220, 240, mistAlpha * Math.max(0.2, dayAmt)));
   }
 
   // === DRAW PIXEL CITY (megapolis skyline) ===
@@ -2166,25 +2289,41 @@
   }
 
   // === RAINBOW ===
+  let rainbowActive = false;
+  let rainbowDecided = false;
+
   function drawRainbow(cyclePhase, t) {
-    // rainbow appears briefly after "rain" (cycle phase ~0.38-0.45 — morning after sunrise)
     const showStart = 0.38, showEnd = 0.46;
-    if (cyclePhase < showStart || cyclePhase > showEnd) return;
+    // decide once per cycle whether to show rainbow (~30% chance)
+    if (cyclePhase >= showStart && cyclePhase < showStart + 0.005) {
+      if (!rainbowDecided) { rainbowActive = Math.random() < 0.3; rainbowDecided = true; }
+    } else if (cyclePhase < showStart || cyclePhase > showEnd) {
+      rainbowDecided = false; rainbowActive = false; return;
+    }
+    if (!rainbowActive) return;
     const fade = cyclePhase < (showStart + 0.02) ? (cyclePhase - showStart) / 0.02
                 : cyclePhase > (showEnd - 0.02) ? (showEnd - cyclePhase) / 0.02 : 1;
     const colors = [
-      [255, 0, 0], [255, 127, 0], [255, 255, 0],
-      [0, 200, 0], [0, 0, 255], [75, 0, 130], [148, 0, 211]
+      [255, 50, 50], [255, 140, 40], [255, 230, 50],
+      [50, 200, 50], [50, 120, 255], [90, 40, 180], [160, 50, 220]
     ];
-    const cx = W * 0.5, cy = H * 0.55;
+    // arc anchored at shoreline, rising well above mountains
+    const arcCx = W * 0.5, arcCy = H * 0.58;
+    const bandWidth = Math.max(PX, Math.round(W * 0.006 / PX) * PX);
+    const baseR = H * 0.42; // radius based on height so arc clears mountains
+    const step = Math.max(0.006, PX / (baseR * 1.5));
+    const blockSize = Math.max(PX, Math.round(W * 0.004 / PX) * PX);
+    const bandGap = bandWidth + Math.max(PX, Math.round(W * 0.003 / PX) * PX);
     for (let c = 0; c < colors.length; c++) {
-      const r = W * 0.32 - c * 4;
+      const r = baseR - c * bandGap;
       const col = colors[c];
-      for (let a = 0; a < Math.PI; a += 0.03) {
-        const rx = cx + Math.cos(a) * r;
-        const ry = cy - Math.sin(a) * r * 0.6;
-        if (ry > H * 0.5) continue;
-        px(rx, ry, 3, 3, rgba(col[0], col[1], col[2], fade * 0.12));
+      for (let a = 0.12; a < Math.PI - 0.12; a += step) {
+        const rx = arcCx + Math.cos(a) * r;
+        const ry = arcCy - Math.sin(a) * r * 0.85;
+        if (ry > H * 0.54 || ry < 0) continue;
+        if (rx < -10 || rx > W + 10) continue;
+        const legFade = Math.sin(a) > 0.2 ? 1 : Math.sin(a) / 0.2;
+        px(rx, ry, blockSize, bandWidth, rgba(col[0], col[1], col[2], fade * legFade * 0.3));
       }
     }
   }
@@ -2401,9 +2540,6 @@
     // clouds (behind mountains)
     drawClouds(dayAmount, mx, time);
 
-    // rainbow (appears briefly in morning phase)
-    drawRainbow(cyclePhase, time);
-
     // airplane
     updateAirplane(dayAmount, starAlpha, time);
 
@@ -2413,17 +2549,19 @@
     // === LANDSCAPE ===
     const seaY = H * 0.55;
 
-    // far mountains
+    // far mountains (snow caps, heavy haze, rock texture)
     const farR = Math.round(lerpVal(15, 80, dayAmount));
     const farG = Math.round(lerpVal(15, 90, dayAmount));
     const farB = Math.round(lerpVal(30, 140, dayAmount));
-    drawMountainLayer(farMtnProfile, seaY, rgb(farR, farG, farB), null, mx, 0.02, PX, dayAmount);
+    drawMountainLayer(farMtnProfile, seaY, rgb(farR, farG, farB), null, mx, 0.02, PX, dayAmount,
+      { snow: true, haze: 0.7 });
 
-    // mid mountains (greener)
+    // mid mountains (greener, light haze, rock texture)
     const midR = Math.round(lerpVal(12, 50, dayAmount));
     const midG = Math.round(lerpVal(20, 100, dayAmount));
     const midB = Math.round(lerpVal(15, 55, dayAmount));
-    drawMountainLayer(midMtnProfile, seaY + 10, rgb(midR, midG, midB), null, mx, 0.03, PX, dayAmount);
+    drawMountainLayer(midMtnProfile, seaY + 10, rgb(midR, midG, midB), null, mx, 0.03, PX, dayAmount,
+      { haze: 0.3 });
 
     // trees on mid mountains
     for (const tr of trees) {
@@ -2438,6 +2576,9 @@
       const ty = seaY + 10 - hillH;
       drawTree(tx, ty, tr.size, tr.type, dayAmount);
     }
+
+    // waterfall on mid mountain
+    drawWaterfall(seaY, dayAmount, mx, time);
 
     // bay hills (left and right, forming cove)
     const hillR = Math.round(lerpVal(10, 40, dayAmount));
@@ -2459,6 +2600,9 @@
       const ty = seaY + 20 - hillH;
       drawTree(tx, ty, tr.size, tr.type, dayAmount);
     }
+
+    // rainbow (appears briefly in morning phase — drawn over mountains)
+    drawRainbow(cyclePhase, time);
 
     // hot air balloon (floats above mountains, day only)
     drawBalloon(dayAmount, time);
