@@ -19,14 +19,48 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Silkscreen:wght@400;700&display=block" rel="stylesheet">
   <style>
     :root {
+      /* ==== PIXEL PALETTE v2 — cohesive 20-color set ==== */
+      /* backgrounds (from deepest to lightest) */
+      --bg-abyss: #030309;
       --bg: #06060f;
-      --green: #00ff88;
-      --orange: #ff6b35;
-      --cyan: #4ecdc4;
-      --purple: #a855f7;
-      --text: #e0e0e0;
-      --dim: #444466;
+      --bg-soft: #0c0c1e;
+      --bg-up: #14142c;
       --card: #0c0c1e;
+
+      /* signature greens (3 shades for shading) */
+      --green: #00ff88;
+      --green-mid: #00cc6e;
+      --green-dark: #087a4a;
+
+      /* sunset oranges */
+      --orange: #ff6b35;
+      --orange-mid: #d94a1a;
+      --orange-dark: #8f2f0e;
+
+      /* deep cyans */
+      --cyan: #4ecdc4;
+      --cyan-mid: #2a9a94;
+      --cyan-dark: #175c58;
+
+      /* vivid purples */
+      --purple: #a855f7;
+      --purple-mid: #7c3aed;
+      --purple-dark: #4a2080;
+
+      /* warm accents */
+      --amber: #ffd93d;
+      --pink: #ff4db3;
+
+      /* text / dims */
+      --text: #e0e0e0;
+      --text-dim: #9999b0;
+      --text-faint: #666688;
+      --dim: #444466;
+
+      /* frame / border colors for 9-slice panels */
+      --frame-lit: #2a2a4a;
+      --frame-shade: #040410;
+
       --pixel: 4px;
     }
 
@@ -41,6 +75,31 @@
       image-rendering: pixelated;
     }
     body.booting { overflow: hidden; }
+
+    /* ===== CRT SCANLINES + VIGNETTE overlay ===== */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9998;
+      background:
+        /* horizontal scanlines every 3px */
+        repeating-linear-gradient(
+          to bottom,
+          rgba(0,0,0,0) 0px,
+          rgba(0,0,0,0) 2px,
+          rgba(0,0,0,0.12) 2px,
+          rgba(0,0,0,0.12) 3px
+        ),
+        /* vignette */
+        radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.55) 100%);
+      mix-blend-mode: multiply;
+    }
+    body.booting::after { display: none; }
+    @media (prefers-reduced-motion: reduce) {
+      body::after { display: none; }
+    }
 
     /* ===== BOOT SEQUENCE ===== */
     .boot-screen {
@@ -242,12 +301,29 @@
       pointer-events: all;
       opacity: 0;
       animation: fade-up 1s ease-out 1.8s forwards;
-      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      transition: transform 0.08s steps(2), background 0.15s, color 0.15s, box-shadow 0.15s;
+      /* RPG-pixel button: chunky offset shadow + inset lights/darks */
+      box-shadow:
+        4px 4px 0 0 var(--bg-abyss),
+        inset -2px -2px 0 0 rgba(0,0,0,0.35),
+        inset 2px 2px 0 0 rgba(255,255,255,0.08);
+      image-rendering: pixelated;
     }
     .hero-cta:hover {
       background: var(--cyan);
       color: var(--bg);
-      box-shadow: 0 0 20px rgba(78,205,196,0.4);
+      box-shadow:
+        4px 4px 0 0 var(--bg-abyss),
+        inset -2px -2px 0 0 rgba(0,0,0,0.4),
+        inset 2px 2px 0 0 rgba(255,255,255,0.2),
+        0 0 20px rgba(78,205,196,0.4);
+    }
+    .hero-cta:active {
+      transform: translate(2px, 2px);
+      box-shadow:
+        2px 2px 0 0 var(--bg-abyss),
+        inset -2px -2px 0 0 rgba(0,0,0,0.4),
+        inset 2px 2px 0 0 rgba(255,255,255,0.2);
     }
     .hero.daytime .hero-cta {
       color: rgba(255,255,255,0.85);
@@ -287,8 +363,12 @@
     .page-body {
       position: relative;
       background:
-        repeating-linear-gradient(0deg, rgba(255,255,255,0.008) 0px, rgba(255,255,255,0.008) 1px, transparent 1px, transparent 4px),
-        repeating-linear-gradient(90deg, rgba(255,255,255,0.005) 0px, rgba(255,255,255,0.005) 1px, transparent 1px, transparent 4px),
+        /* fine pixel grid (horizontal lines, 4px spacing) */
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 4px),
+        /* fine pixel grid (vertical lines, 4px spacing) */
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.008) 0px, rgba(255,255,255,0.008) 1px, transparent 1px, transparent 4px),
+        /* diagonal ordered dither for subtle texture */
+        repeating-linear-gradient(45deg, rgba(0,255,136,0.006) 0px, rgba(0,255,136,0.006) 2px, transparent 2px, transparent 8px),
         var(--bg);
       overflow: hidden;
     }
@@ -364,18 +444,23 @@
     }
 
     .project-card {
-      background: linear-gradient(165deg, rgba(12,12,30,0.95) 0%, rgba(8,8,22,0.98) 100%);
-      border: 1px solid rgba(0,255,136,0.08);
-      border-left: 3px solid var(--green);
+      background: var(--card);
+      border: 2px solid var(--bg-up);
+      border-left: 4px solid var(--green);
       padding: 0;
       text-decoration: none;
       color: inherit;
       display: block;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s, border-left-color 0.3s;
       position: relative;
       overflow: hidden;
       opacity: 0;
       transform: translateY(30px);
+      /* chunky pixel frame: dark inset + offset shadow */
+      box-shadow:
+        6px 6px 0 0 var(--bg-abyss),
+        inset 1px 1px 0 0 rgba(255,255,255,0.04);
+      image-rendering: pixelated;
     }
     .project-card.visible {
       opacity: 1;
@@ -431,29 +516,41 @@
     }
     .project-card:hover::before { top: 100%; }
     .project-card:hover {
-      border-color: rgba(0,255,136,0.2);
+      border-color: var(--green-dark);
       border-left-color: var(--cyan);
-      transform: translateY(-3px);
+      transform: translate(-2px, -5px);
       box-shadow:
-        0 0 30px rgba(0,255,136,0.08),
-        0 12px 40px rgba(0,0,0,0.4),
-        inset 0 0 30px rgba(0,255,136,0.02);
+        8px 10px 0 0 var(--bg-abyss),
+        0 0 24px rgba(0,255,136,0.12),
+        inset 1px 1px 0 0 rgba(0,255,136,0.08);
     }
     .project-card:hover .project-name { text-shadow: 0 0 12px rgba(0,255,136,0.4); }
     .project-card:hover .terminal-dot { opacity: 1; }
 
-    /* pixel corner decorations */
+    /* pixel corner decorations — four corners with L-brackets */
     .project-card::after {
       content: '';
       position: absolute;
-      bottom: 0; right: 0;
-      width: 12px; height: 12px;
-      border-right: 2px solid rgba(0,255,136,0.15);
-      border-bottom: 2px solid rgba(0,255,136,0.15);
-      transition: border-color 0.3s;
+      inset: 4px;
+      pointer-events: none;
+      background:
+        /* top-left */
+        linear-gradient(var(--green-dark), var(--green-dark)) top left / 10px 2px no-repeat,
+        linear-gradient(var(--green-dark), var(--green-dark)) top left / 2px 10px no-repeat,
+        /* top-right */
+        linear-gradient(var(--green-dark), var(--green-dark)) top right / 10px 2px no-repeat,
+        linear-gradient(var(--green-dark), var(--green-dark)) top right / 2px 10px no-repeat,
+        /* bottom-left */
+        linear-gradient(var(--green-dark), var(--green-dark)) bottom left / 10px 2px no-repeat,
+        linear-gradient(var(--green-dark), var(--green-dark)) bottom left / 2px 10px no-repeat,
+        /* bottom-right */
+        linear-gradient(var(--green-dark), var(--green-dark)) bottom right / 10px 2px no-repeat,
+        linear-gradient(var(--green-dark), var(--green-dark)) bottom right / 2px 10px no-repeat;
+      opacity: 0.45;
+      transition: opacity 0.3s;
     }
     .project-card:hover::after {
-      border-color: rgba(78,205,196,0.4);
+      opacity: 1;
     }
 
     .project-name {
@@ -575,31 +672,32 @@
     }
     .donate-addr {
       display: block;
-      color: #8888aa;
+      color: var(--text-dim);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       cursor: pointer;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.25s, background 0.25s, border-color 0.25s, border-left-color 0.25s, box-shadow 0.25s;
       font-family: 'Silkscreen', 'Press Start 2P', monospace;
       font-size: clamp(0.4rem, 1.7cqi, 0.65rem);
       line-height: 1.4;
       padding: 0.6rem 0.8rem;
-      background: rgba(0, 255, 136, 0.02);
-      border: 1px solid rgba(0, 255, 136, 0.06);
-      border-left: 2px solid rgba(0, 255, 136, 0.15);
+      background: var(--bg-soft);
+      border: 2px solid var(--bg-up);
+      border-left: 4px solid var(--green-dark);
       width: 100%;
       max-width: 100%;
       box-sizing: border-box;
       min-width: 0;
+      box-shadow: 3px 3px 0 0 var(--bg-abyss);
     }
     .donate-addr:hover {
       color: #ccccee;
-      background: rgba(0, 255, 136, 0.06);
-      border-color: rgba(0, 255, 136, 0.25);
+      background: var(--bg-up);
+      border-color: var(--green-dark);
       border-left-color: var(--green);
-      transform: translateX(4px);
-      box-shadow: 0 0 15px rgba(0,255,136,0.05);
+      transform: translate(-2px, -2px);
+      box-shadow: 5px 5px 0 0 var(--bg-abyss), 0 0 15px rgba(0,255,136,0.08);
     }
     .donate-addr.copied {
       color: var(--bg) !important;
@@ -657,6 +755,17 @@
       align-items: start;
       max-width: 800px;
       margin: 0 auto;
+      /* character-stats panel */
+      padding: 2rem 2rem 2rem;
+      background:
+        linear-gradient(var(--cyan), var(--cyan)) top left / 4px 4px no-repeat,
+        linear-gradient(var(--cyan), var(--cyan)) top right / 4px 4px no-repeat,
+        linear-gradient(var(--cyan), var(--cyan)) bottom left / 4px 4px no-repeat,
+        linear-gradient(var(--cyan), var(--cyan)) bottom right / 4px 4px no-repeat,
+        var(--bg-soft);
+      border: 2px solid var(--cyan-dark);
+      box-shadow: 6px 6px 0 0 var(--bg-abyss);
+      position: relative;
     }
     .pixel-avatar {
       width: 100px; height: 100px;
@@ -713,9 +822,20 @@
       display: flex;
       justify-content: center;
       gap: clamp(1.5rem, 4vw, 3rem);
-      padding: 1.5rem;
+      padding: 1.5rem 2rem;
       position: relative;
       z-index: 2;
+      max-width: 700px;
+      margin: 1rem auto 2rem;
+      /* game stat window */
+      background:
+        linear-gradient(var(--green), var(--green)) top left / 4px 4px no-repeat,
+        linear-gradient(var(--green), var(--green)) top right / 4px 4px no-repeat,
+        linear-gradient(var(--green), var(--green)) bottom left / 4px 4px no-repeat,
+        linear-gradient(var(--green), var(--green)) bottom right / 4px 4px no-repeat,
+        var(--bg-soft);
+      border: 2px solid var(--green-dark);
+      box-shadow: 6px 6px 0 0 var(--bg-abyss);
     }
     .stat-item {
       text-align: center;
@@ -745,7 +865,18 @@
     .project-card.featured {
       grid-column: 1 / -1;
       border-left-color: var(--orange);
-      background: linear-gradient(165deg, rgba(20,14,8,0.95) 0%, rgba(12,10,22,0.98) 100%);
+      background: var(--card);
+    }
+    .project-card.featured::after {
+      background:
+        linear-gradient(var(--orange-dark), var(--orange-dark)) top left / 10px 2px no-repeat,
+        linear-gradient(var(--orange-dark), var(--orange-dark)) top left / 2px 10px no-repeat,
+        linear-gradient(var(--orange-dark), var(--orange-dark)) top right / 10px 2px no-repeat,
+        linear-gradient(var(--orange-dark), var(--orange-dark)) top right / 2px 10px no-repeat,
+        linear-gradient(var(--orange-dark), var(--orange-dark)) bottom left / 10px 2px no-repeat,
+        linear-gradient(var(--orange-dark), var(--orange-dark)) bottom left / 2px 10px no-repeat,
+        linear-gradient(var(--orange-dark), var(--orange-dark)) bottom right / 10px 2px no-repeat,
+        linear-gradient(var(--orange-dark), var(--orange-dark)) bottom right / 2px 10px no-repeat;
     }
     .project-card.featured .project-card-body {
       display: grid;
@@ -756,12 +887,13 @@
     .featured-badge {
       font-size: 0.45rem;
       color: var(--orange);
-      border: 1px solid var(--orange);
+      border: 2px solid var(--orange);
       padding: 0.3em 0.6em;
       letter-spacing: 0.15em;
       animation: pulse 2s ease-in-out infinite;
       white-space: nowrap;
       align-self: start;
+      box-shadow: 2px 2px 0 0 var(--orange-dark);
     }
     .project-card.featured .project-card-header { background: rgba(255,107,53,0.04); border-bottom-color: rgba(255,107,53,0.08); }
     .project-card.featured:hover { border-left-color: var(--cyan); }
@@ -771,14 +903,23 @@
 
     /* ===== MINI TERMINAL ===== */
     .mini-terminal {
-      background: rgba(0,0,0,0.5);
-      border: 1px solid rgba(0,255,136,0.15);
+      background:
+        /* 4 glint pixels at corners */
+        linear-gradient(var(--green), var(--green)) top left / 4px 4px no-repeat,
+        linear-gradient(var(--green), var(--green)) top right / 4px 4px no-repeat,
+        linear-gradient(var(--green), var(--green)) bottom left / 4px 4px no-repeat,
+        linear-gradient(var(--green), var(--green)) bottom right / 4px 4px no-repeat,
+        var(--bg-abyss);
+      border: 2px solid var(--green-dark);
       padding: 1rem;
       margin-top: 2rem;
       max-width: 500px;
       font-family: 'Silkscreen', 'Press Start 2P', monospace;
       font-size: clamp(0.4rem, 1vw, 0.55rem);
       position: relative;
+      box-shadow:
+        4px 4px 0 0 var(--bg-abyss),
+        inset 1px 1px 0 0 rgba(0,255,136,0.05);
     }
     .mini-terminal-header {
       color: var(--dim);
@@ -817,11 +958,24 @@
     /* ===== HEATMAP ===== */
     .heatmap-section {
       text-align: center;
-      padding: 0 1.5rem 2rem;
-      max-width: 800px;
-      margin: 0 auto;
+      padding: 2rem 1.5rem 2rem;
+      max-width: 620px;
+      margin: 2rem auto;
       position: relative;
       z-index: 2;
+      background:
+        linear-gradient(var(--purple), var(--purple)) top left / 4px 4px no-repeat,
+        linear-gradient(var(--purple), var(--purple)) top right / 4px 4px no-repeat,
+        linear-gradient(var(--purple), var(--purple)) bottom left / 4px 4px no-repeat,
+        linear-gradient(var(--purple), var(--purple)) bottom right / 4px 4px no-repeat,
+        var(--bg-soft);
+      border: 2px solid var(--purple-dark);
+      box-shadow: 6px 6px 0 0 var(--bg-abyss);
+    }
+    .heatmap-section .section-title {
+      margin-bottom: 1rem;
+      color: var(--purple);
+      text-shadow: 0 0 18px rgba(168,85,247,0.35);
     }
     .heatmap-grid {
       display: inline-grid;
@@ -853,24 +1007,36 @@
       position: fixed;
       top: 1rem; right: 1rem;
       z-index: 100;
-      background: rgba(6,6,15,0.6);
-      border: 1px solid rgba(255,255,255,0.1);
-      width: 32px; height: 32px;
+      background: var(--bg-abyss);
+      border: 2px solid var(--frame-lit);
+      width: 36px; height: 36px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       opacity: 0;
       animation: fade-up 1s ease-out 4s forwards;
-      transition: border-color 0.3s, background 0.3s;
+      transition: border-color 0.2s, background 0.2s, transform 0.08s steps(2), box-shadow 0.15s;
       padding: 0;
       font-size: 0;
+      /* chunky pixel-button shadow */
+      box-shadow:
+        3px 3px 0 0 var(--bg-abyss),
+        inset -2px -2px 0 0 rgba(0,0,0,0.4),
+        inset 2px 2px 0 0 rgba(255,255,255,0.06);
     }
     .cycle-toggle:hover {
       border-color: var(--green);
-      background: rgba(0,255,136,0.08);
+      background: var(--bg);
     }
-    .cycle-toggle svg { width: 16px; height: 16px; }
+    .cycle-toggle:active {
+      transform: translate(2px, 2px);
+      box-shadow:
+        1px 1px 0 0 var(--bg-abyss),
+        inset -2px -2px 0 0 rgba(0,0,0,0.4),
+        inset 2px 2px 0 0 rgba(255,255,255,0.06);
+    }
+    .cycle-toggle svg { width: 16px; height: 16px; image-rendering: pixelated; }
 
     @media (max-width: 600px) {
       .footer-grid { grid-template-columns: 1fr; }
@@ -1210,12 +1376,102 @@
   // === EASTER EGG STATE ===
   let ufoActive = false, ufoX = -50, ufoY = 0;
   let moonScreenX = 0, moonScreenY = 0;
+  let sunScreenX = 0, sunScreenY = 0;
   let rapidClicks = [], fireworkShow = false, fireworkTimer = 0;
   let shakeOffset = 0;
 
+  // === TIME-SCRUB DRAG (sun/moon) ===
+  let dragTarget = null; // 'sun' | 'moon' | null
+  let wasDragging = false;
+
+  function getEvtPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const pt = e.touches && e.touches[0] ? e.touches[0] : e;
+    return { x: pt.clientX - rect.left, y: pt.clientY - rect.top };
+  }
+  function nearCelestial(pos) {
+    const phase = window.__manualCyclePhase != null ? window.__manualCyclePhase : (time / 60 / CYCLE_DURATION) % 1;
+    const sunVis = phase > 0.28 && phase < 0.78;
+    if (sunVis && Math.abs(pos.x - sunScreenX) < 32 && Math.abs(pos.y - sunScreenY) < 32) return 'sun';
+    if (!sunVis && Math.abs(pos.x - moonScreenX) < 32 && Math.abs(pos.y - moonScreenY) < 32) return 'moon';
+    return null;
+  }
+  heroEl.addEventListener('mousedown', e => {
+    if (e.button !== 0) return; // left-click only
+    const pos = getEvtPos(e);
+    const hit = nearCelestial(pos);
+    if (hit) {
+      dragTarget = hit;
+      wasDragging = false;
+      heroEl.style.cursor = 'grabbing';
+      e.preventDefault();
+    }
+  });
+  heroEl.addEventListener('mousemove', e => {
+    const pos = getEvtPos(e);
+    if (dragTarget) {
+      const newPhase = Math.max(0, Math.min(0.9999, pos.x / W));
+      window.__manualCyclePhase = newPhase;
+      wasDragging = true;
+    } else {
+      heroEl.style.cursor = nearCelestial(pos) ? 'grab' : '';
+    }
+  });
+  function endDrag() {
+    if (dragTarget) {
+      dragTarget = null;
+      heroEl.style.cursor = '';
+      wasDragging = true; // always block click handler after a sun/moon touch
+      setTimeout(() => { wasDragging = false; }, 100);
+      // sync `time` so auto-cycle resumes seamlessly from the scrubbed phase, then unpin
+      if (window.__manualCyclePhase != null) {
+        const newTime = Math.floor(window.__manualCyclePhase * 60 * CYCLE_DURATION);
+        const dt = newTime - time;
+        // shift all scheduler deadlines so ambient spawns don't go dead after a rewind
+        nextCannonShot += dt;
+        nextShootingStar += dt;
+        nextFlock += dt;
+        nextAirplane += dt;
+        nextFishJump += dt;
+        nextFirework += dt;
+        nextWhale += dt;
+        time = newTime;
+        window.__manualCyclePhase = null;
+      }
+    }
+  }
+  window.addEventListener('mouseup', endDrag);
+  heroEl.addEventListener('mouseleave', endDrag);
+  // touch support
+  heroEl.addEventListener('touchstart', e => {
+    const pos = getEvtPos(e);
+    const hit = nearCelestial(pos);
+    if (hit) { dragTarget = hit; wasDragging = false; e.preventDefault(); }
+  }, { passive: false });
+  heroEl.addEventListener('touchmove', e => {
+    if (dragTarget) {
+      const pos = getEvtPos(e);
+      const newPhase = Math.max(0, Math.min(0.9999, pos.x / W));
+      window.__manualCyclePhase = newPhase;
+      wasDragging = true;
+      e.preventDefault();
+    }
+  }, { passive: false });
+  window.addEventListener('touchend', endDrag);
+  window.addEventListener('touchcancel', endDrag);
+
   heroEl.addEventListener('click', e => {
+    if (wasDragging) return; // skip explosion if click ended a drag
     const rect = canvas.getBoundingClientRect();
     const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+
+    const seaY_ = H * 0.55;
+
+    // volcano: 5 clicks on the tallest mountain peak
+    if (tryVolcanoClick(cx, cy, seaY_)) return;
+
+    // kraken: click tentacle to damage
+    if (tryKrakenClick(cx, cy)) return;
 
     // Easter egg 4: 5 rapid clicks → firework show
     const now = performance.now();
@@ -1226,6 +1482,20 @@
       fireworkTimer = 360; // ~6 seconds
       rapidClicks = [];
       return;
+    }
+
+    // triple-click sailboat → kraken (wins over dblclick pirate mode)
+    if (Math.abs(cx - boatScreenX) < 30 && Math.abs(cy - boatScreenY) < 40) {
+      tripleClickTimes.push(now);
+      tripleClickTimes = tripleClickTimes.filter(t => now - t < 800);
+      if (tripleClickTimes.length >= 3 && !krakenActive) {
+        // 3rd click arrives after dblclick, so pirateMode may have just been set — override it
+        pirateMode = false;
+        pirateTimer = 0;
+        spawnKraken();
+        tripleClickTimes = [];
+        return;
+      }
     }
 
     // normal click explosion
@@ -1275,6 +1545,38 @@
       }
     });
   }
+
+  // Storm mode — key 'S' when hero in view
+  let heroInView = false;
+  const heroViewObs = new IntersectionObserver(([e]) => { heroInView = e.isIntersecting; }, { threshold: 0.2 });
+  heroViewObs.observe(heroEl);
+  window.addEventListener('keydown', e => {
+    if (!heroInView) return;
+    if (e.key === 's' || e.key === 'S') { triggerStorm(); }
+  });
+
+  // Sky portal — right-click hold in upper-sky zone of the canvas only.
+  // Keep native context menu working on the CTA link and hero text.
+  canvas.addEventListener('contextmenu', e => {
+    const rect = canvas.getBoundingClientRect();
+    const cy = e.clientY - rect.top;
+    if (cy <= H * 0.45) e.preventDefault();
+  });
+  canvas.addEventListener('mousedown', e => {
+    if (e.button !== 2) return; // right-click only
+    const rect = canvas.getBoundingClientRect();
+    const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+    if (cy > H * 0.45) return; // only in upper sky
+    openPortal(cx, cy);
+    e.preventDefault();
+  });
+  window.addEventListener('mouseup', e => {
+    if (e.button === 2) closePortal();
+  });
+  // close portal on focus loss (otherwise right-click-hold + alt-tab leaves it open)
+  window.addEventListener('blur', closePortal);
+  window.addEventListener('pointercancel', closePortal);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) closePortal(); });
 
   function drawUFO(t) {
     if (!ufoActive) return;
@@ -1353,28 +1655,34 @@
     const snowRadius = 0.05;
     const snowThreshold = localPeakH * 0.93;
 
+    // pre-compute smoothed slopes (average over ±5 columns) to avoid noise-driven stripes
+    const smoothWindow = 5;
+    const smoothedSlopes = new Array(profile.length);
+    for (let i = 0; i < profile.length; i++) {
+      const aIdx = Math.max(0, i - smoothWindow);
+      const bIdx = Math.min(profile.length - 1, i + smoothWindow);
+      smoothedSlopes[i] = (profile[bIdx].y - profile[aIdx].y) / (bIdx - aIdx + 0.001);
+    }
+
     for (let i = 0; i < profile.length - 1; i++) {
       const p = profile[i];
-      const next = profile[Math.min(i + 1, profile.length - 1)];
-      const prev = profile[Math.max(i - 1, 0)];
       const screenX = p.x * W + ox;
       const h = p.y * H * 0.8;
       if (h <= 0) continue;
 
       const topY = Math.floor(baseY - h);
 
-      // === DIRECTIONAL SUNLIGHT ===
-      // slope: positive = going up (left-lit), negative = going down (shadow)
-      const slope = next.y - prev.y;
+      // === DIRECTIONAL SUNLIGHT (smoothed) ===
+      const slope = smoothedSlopes[i];
       let lightMod = 0;
       if (dayAmt > 0.2) {
-        // sunlit side (left face = slope going up)
-        lightMod = Math.max(-0.3, Math.min(0.3, slope * 8)) * dayAmt;
+        // gentler factor now that slope is smoothed
+        lightMod = Math.max(-0.2, Math.min(0.2, slope * 60)) * dayAmt;
       }
 
-      const lr = Math.min(255, Math.max(0, baseR + Math.round(lightMod * 60)));
-      const lg = Math.min(255, Math.max(0, baseG + Math.round(lightMod * 50)));
-      const lb = Math.min(255, Math.max(0, baseB + Math.round(lightMod * 30)));
+      const lr = Math.min(255, Math.max(0, baseR + Math.round(lightMod * 40)));
+      const lg = Math.min(255, Math.max(0, baseG + Math.round(lightMod * 35)));
+      const lb = Math.min(255, Math.max(0, baseB + Math.round(lightMod * 22)));
 
       // main fill
       ctx.fillStyle = rgb(lr, lg, lb);
@@ -1394,11 +1702,6 @@
           px(screenX, topY, colW, snowDepth, rgb(snowR, snowG, snowB), snowAlpha);
       }
 
-      // === SHADOW on downslope ===
-      if (slope < -0.003 && dayAmt > 0.1) {
-        const shadowA = Math.min(0.25, Math.abs(slope) * 5) * dayAmt;
-        px(screenX, topY, colW, Math.ceil(h), rgba(0, 0, 20, shadowA));
-      }
     }
 
     // === ATMOSPHERIC HAZE ===
@@ -2455,6 +2758,465 @@
     }
   }
 
+  // === GIANT WHALE (foreground) ===
+  let whale = null;
+  let nextWhale = 1500 + Math.random() * 1800; // ~25-55s first appearance
+  const WHALE_LEN = 80; // total body length in px
+  const WHALE_MAX_H = 10; // max above-water body height
+
+  function spawnWhale() {
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    whale = {
+      x: dir > 0 ? -WHALE_LEN - 20 : W + 20,
+      dir,
+      vx: dir * 0.3,
+      surfaceAt: W * (0.35 + Math.random() * 0.3),
+      spouts: [],
+      splashes: [],
+      blown: false
+    };
+  }
+
+  function updateWhale(seaY, t) {
+    if (!whale && t > nextWhale) { spawnWhale(); nextWhale = t + 2400 + Math.random() * 3000; }
+    if (!whale) return;
+    whale.x += whale.vx;
+
+    // surfacing dist from the surface point
+    const headFrontX = whale.x + (whale.dir > 0 ? WHALE_LEN * 0.9 : WHALE_LEN * 0.1);
+    const dist = Math.abs(headFrontX - whale.surfaceAt);
+    const zone = 320;
+    const surfacing = dist < zone;
+    const depth = surfacing ? Math.cos((dist / zone) * Math.PI / 2) : 0;
+    const visibleH = depth * WHALE_MAX_H;
+
+    // color palette for the whale (dark grey-blue with highlights)
+    const bodyDark = '#1f242e';
+    const bodyMid = '#2b3140';
+    const bodyLight = '#4a5568';
+
+    if (depth > 0.04) {
+      // body drawn as vertical slices using a body profile
+      // profile: narrow at both ends, bulky in middle, skewed so head is fatter than tail
+      for (let col = 0; col < WHALE_LEN; col++) {
+        const n = col / (WHALE_LEN - 1);
+        // whale body shape: sin curve with front-heavy skew
+        // head at n=0, tail at n=1 (assuming dir=1)
+        const shape = Math.sin(Math.pow(n, 1.15) * Math.PI) * (1 - n * 0.35);
+        const colH = shape * visibleH;
+        if (colH < 0.4) continue;
+        // head (n=0) is the leading edge in movement direction
+        const x = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - col) : Math.floor(whale.x + col);
+        const h = Math.max(1, Math.ceil(colH));
+        const topY = Math.floor(seaY - colH);
+        // main body
+        px(x, topY, 1, h + 2, bodyMid);
+        // darker bottom (underside shadow at waterline)
+        px(x, seaY - 1, 1, 2, bodyDark);
+        // top highlight ridge (lit from above)
+        if (h > 2) px(x, topY, 1, 1, bodyLight);
+      }
+
+      // dorsal hump at n≈0.58 — slight bump on the back
+      if (depth > 0.4) {
+        const humpN = 0.58;
+        const humpCol = Math.floor(WHALE_LEN * humpN);
+        const humpX = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - humpCol) : Math.floor(whale.x + humpCol);
+        const baseH = Math.sin(Math.pow(humpN, 1.15) * Math.PI) * (1 - humpN * 0.35) * visibleH;
+        const humpH = Math.round(depth * 3);
+        if (humpH > 0) {
+          px(humpX - 1, Math.floor(seaY - baseH - humpH), 3, humpH, bodyMid);
+          px(humpX, Math.floor(seaY - baseH - humpH), 1, 1, bodyLight);
+        }
+      }
+
+      // eye — small white pixel on the head (n ≈ 0.12)
+      if (depth > 0.75) {
+        const eyeN = 0.12;
+        const eyeCol = Math.floor(WHALE_LEN * eyeN);
+        const eyeX = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - eyeCol) : Math.floor(whale.x + eyeCol);
+        const baseH = Math.sin(Math.pow(eyeN, 1.15) * Math.PI) * (1 - eyeN * 0.35) * visibleH;
+        px(eyeX, Math.floor(seaY - baseH + 1), 1, 1, '#f0f0f8');
+      }
+
+      // mouth line — small dark line near front under the head
+      if (depth > 0.7) {
+        const mouthN = 0.06;
+        const mouthCol = Math.floor(WHALE_LEN * mouthN);
+        const mouthX = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - mouthCol) : Math.floor(whale.x + mouthCol);
+        px(mouthX - 2, seaY - 1, 5, 1, bodyDark);
+      }
+
+      // blowhole spout (one-time per surfacing) — near top of head
+      const blowN = 0.25;
+      if (depth > 0.88 && !whale.blown) {
+        whale.blown = true;
+        const blowCol = Math.floor(WHALE_LEN * blowN);
+        const blowX = whale.dir > 0 ? whale.x + WHALE_LEN - 1 - blowCol : whale.x + blowCol;
+        const blowBaseH = Math.sin(Math.pow(blowN, 1.15) * Math.PI) * (1 - blowN * 0.35) * visibleH;
+        const blowY = seaY - blowBaseH - 2;
+        for (let i = 0; i < 22; i++) {
+          whale.spouts.push({
+            x: blowX + (Math.random() - 0.5) * 2, y: blowY,
+            vx: (Math.random() - 0.5) * 1.6,
+            vy: -(3 + Math.random() * 2.5),
+            life: 1
+          });
+        }
+      }
+      if (depth < 0.6) whale.blown = false;
+    }
+
+    // tail fluke (V-shape) rising just before dive-out on the trailing side
+    const pastCenter = (whale.dir > 0 && headFrontX > whale.surfaceAt) || (whale.dir < 0 && headFrontX < whale.surfaceAt);
+    const diveDist = dist;
+    const inDive = pastCenter && diveDist > zone * 0.55 && diveDist < zone * 0.95;
+    if (inDive) {
+      const p = (diveDist - zone * 0.55) / (zone * 0.4);
+      const lift = Math.sin(p * Math.PI) * 14;
+      const tailBaseX = whale.dir > 0 ? whale.x - 2 : whale.x + WHALE_LEN + 2;
+      const flukeY = seaY - lift;
+      // V-shaped horizontal fluke
+      px(tailBaseX - 7, flukeY + 6, 14, 2, bodyDark);
+      px(tailBaseX - 5, flukeY + 4, 10, 2, bodyMid);
+      px(tailBaseX - 3, flukeY + 2, 6, 2, bodyMid);
+      px(tailBaseX - 1, flukeY, 2, 2, bodyLight);
+      // base stem connecting tail to water
+      px(tailBaseX - 1, seaY - 2, 2, 3, bodyDark);
+      // splash spawns when tail slaps
+      if (p > 0.3 && p < 0.6 && t % 3 === 0) {
+        for (let i = 0; i < 4; i++) {
+          whale.splashes.push({
+            x: tailBaseX + (Math.random() - 0.5) * 14, y: seaY - 2,
+            vx: (Math.random() - 0.5) * 1.8,
+            vy: -(1 + Math.random() * 1.8),
+            life: 1
+          });
+        }
+      }
+    }
+
+    // update spout particles
+    for (let i = whale.spouts.length - 1; i >= 0; i--) {
+      const p = whale.spouts[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.14; p.life -= 0.018;
+      if (p.life <= 0) { whale.spouts.splice(i, 1); continue; }
+      px(p.x, p.y, 2, 2, rgba(220, 235, 250, p.life * 0.85));
+    }
+    // update splashes
+    for (let i = whale.splashes.length - 1; i >= 0; i--) {
+      const p = whale.splashes[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.18; p.life -= 0.03;
+      if (p.life <= 0) { whale.splashes.splice(i, 1); continue; }
+      px(p.x, p.y, 2, 1, rgba(200, 220, 235, p.life * 0.7));
+    }
+
+    // exit
+    if (whale.dir > 0 && whale.x > W + 50) whale = null;
+    else if (whale.dir < 0 && whale.x < -WHALE_LEN - 50) whale = null;
+  }
+
+  // === STORM MODE ===
+  let stormActive = false, stormTimer = 0, rainDrops = [], lightningFlash = 0, nextLightning = 0;
+  let currentBolt = null; // cached polyline for the active strike
+
+  function triggerStorm() {
+    if (stormActive) return;
+    stormActive = true;
+    stormTimer = 900; // 15s at 60fps
+    nextLightning = 120 + Math.random() * 180;
+    for (let i = 0; i < 60; i++) {
+      rainDrops.push({ x: Math.random() * W, y: Math.random() * H * 0.5, vy: 10 + Math.random() * 4, vx: -1 });
+    }
+  }
+
+  function updateStorm(seaY, t) {
+    if (!stormActive) return;
+    stormTimer--;
+    if (stormTimer <= 0) { stormActive = false; rainDrops = []; currentBolt = null; return; }
+    // dark overlay (growing then fading)
+    const intensity = stormTimer > 60 ? Math.min(1, (900 - stormTimer) / 60) : stormTimer / 60;
+    px(0, 0, W, seaY + 20, rgba(20, 20, 40, intensity * 0.55));
+    // rain
+    for (const d of rainDrops) {
+      d.x += d.vx; d.y += d.vy;
+      if (d.y > seaY + 5) { d.y = -10; d.x = Math.random() * W; }
+      if (d.x < 0) { d.x = W; }
+      px(d.x, d.y, 1, 4, rgba(150, 180, 220, 0.6 * intensity));
+    }
+    // lightning
+    nextLightning--;
+    if (nextLightning <= 0) {
+      lightningFlash = 8;
+      nextLightning = 120 + Math.random() * 300;
+      // build the bolt polyline once per strike (not every frame) so it reads as a
+      // persistent coherent strike instead of flickering noise
+      currentBolt = [];
+      let x = W * (0.2 + Math.random() * 0.6);
+      for (let by = 0; by < H * 0.45; by += 6) {
+        currentBolt.push({ x, y: by });
+        x += (Math.random() - 0.5) * 8;
+      }
+    }
+    if (lightningFlash > 0) {
+      lightningFlash--;
+      // full-screen flash
+      px(0, 0, W, H, rgba(255, 255, 255, lightningFlash / 16));
+      // pixel bolt — redraw the cached polyline
+      if (lightningFlash > 4 && currentBolt) {
+        for (const seg of currentBolt) {
+          px(seg.x, seg.y, 2, 6, rgba(255, 255, 220, 0.9));
+        }
+      }
+    }
+  }
+
+  // === VOLCANO EASTER EGG ===
+  let volcanoClicks = 0, lastVolcanoClick = 0;
+  let volcanoActive = false, volcanoTimer = 0;
+  let lavaParticles = [], ashParticles = [];
+  // volcano at the tallest far-mtn peak (x ≈ 0.35)
+  const volcanoX = 0.35;
+
+  function tryVolcanoClick(cx, cy, seaY) {
+    // mirror parallax offset used in updateVolcano so hitbox tracks the rendered peak
+    const vx = volcanoX * W + (mouseX - 0.5) * W * 0.02;
+    const profile = farMtnProfile;
+    const normalizedX = (volcanoX + 0.15) / 1.3;
+    const idx = Math.floor(normalizedX * (profile.length - 1));
+    const vh = profile[idx] ? profile[idx].y * H * 0.8 : 0;
+    const vy = seaY - vh;
+    if (Math.abs(cx - vx) < 28 && Math.abs(cy - vy) < 28) {
+      const now = performance.now();
+      if (now - lastVolcanoClick > 1200) volcanoClicks = 0;
+      volcanoClicks++;
+      lastVolcanoClick = now;
+      if (volcanoClicks >= 5 && !volcanoActive) {
+        volcanoActive = true;
+        volcanoTimer = 1800; // 30s
+        volcanoClicks = 0;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function updateVolcano(seaY, mx, t) {
+    if (!volcanoActive) return;
+    volcanoTimer--;
+    if (volcanoTimer <= 0) { volcanoActive = false; lavaParticles = []; ashParticles = []; return; }
+    const ox = mx * W * 0.02;
+    const vx = volcanoX * W + ox;
+    const profile = farMtnProfile;
+    const normalizedX = (volcanoX + 0.15) / 1.3;
+    const idx = Math.floor(normalizedX * (profile.length - 1));
+    const vh = profile[idx] ? profile[idx].y * H * 0.8 : 0;
+    const vy = seaY - vh;
+    // glow
+    const glow = ctx.createRadialGradient(vx, vy, 8, vx, vy, 120);
+    glow.addColorStop(0, 'rgba(255, 80, 20, 0.35)');
+    glow.addColorStop(0.5, 'rgba(255, 50, 10, 0.12)');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.fillRect(vx - 120, vy - 120, 240, 240);
+    // emit lava
+    if (t % 3 === 0) {
+      for (let i = 0; i < 3; i++) {
+        lavaParticles.push({
+          x: vx + (Math.random() - 0.5) * 6,
+          y: vy,
+          vx: (Math.random() - 0.5) * 2.5,
+          vy: -(3 + Math.random() * 3),
+          life: 1,
+          color: Math.random() > 0.5 ? [255, 160, 40] : [255, 80, 20]
+        });
+      }
+    }
+    // emit ash
+    if (t % 6 === 0) {
+      ashParticles.push({
+        x: vx + (Math.random() - 0.5) * 16, y: vy - 10,
+        vx: (Math.random() - 0.5) * 1.2, vy: -0.3 - Math.random() * 0.4,
+        life: 1
+      });
+    }
+    // update lava
+    for (let i = lavaParticles.length - 1; i >= 0; i--) {
+      const p = lavaParticles[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life -= 0.012;
+      if (p.life <= 0) { lavaParticles.splice(i, 1); continue; }
+      px(p.x, p.y, 2, 2, rgba(p.color[0], p.color[1], p.color[2], p.life));
+    }
+    // update ash
+    for (let i = ashParticles.length - 1; i >= 0; i--) {
+      const a = ashParticles[i];
+      a.x += a.vx; a.y += a.vy; a.life -= 0.004;
+      if (a.life <= 0) { ashParticles.splice(i, 1); continue; }
+      px(a.x, a.y, 2, 2, rgba(60, 60, 65, a.life * 0.5));
+    }
+    if (lavaParticles.length > 150) lavaParticles.splice(0, lavaParticles.length - 150);
+    if (ashParticles.length > 80) ashParticles.splice(0, ashParticles.length - 80);
+  }
+
+  // === SKY PORTAL (right-click hold) ===
+  let portalActive = false, portalX = 0, portalY = 0, portalSize = 0, portalItems = [];
+  const portalObjects = [
+    // pizza (mini 6x6)
+    (x, y) => {
+      px(x, y, 6, 2, '#c47f2b'); px(x, y+2, 6, 2, '#e8a560'); px(x, y+4, 6, 2, '#c47f2b');
+      px(x+1, y+2, 1, 1, '#e63946'); px(x+4, y+3, 1, 1, '#e63946');
+    },
+    // coin
+    (x, y) => {
+      px(x+1, y, 4, 1, '#ffd93d'); px(x, y+1, 6, 4, '#ffd93d'); px(x+1, y+5, 4, 1, '#ffd93d');
+      px(x+2, y+1, 1, 4, '#f59e0b');
+    },
+    // book
+    (x, y) => {
+      px(x, y, 7, 6, '#4a2a0f'); px(x+1, y+1, 5, 4, '#ecc8a0');
+      px(x+3, y+1, 1, 4, '#4a2a0f');
+    },
+    // code symbol <>
+    (x, y) => {
+      px(x, y+2, 1, 2, '#00ff88'); px(x+1, y+1, 1, 1, '#00ff88'); px(x+1, y+4, 1, 1, '#00ff88');
+      px(x+5, y+2, 1, 2, '#00ff88'); px(x+4, y+1, 1, 1, '#00ff88'); px(x+4, y+4, 1, 1, '#00ff88');
+    },
+  ];
+
+  function openPortal(x, y) {
+    if (portalActive) return;
+    portalActive = true;
+    portalX = x; portalY = y; portalSize = 0;
+  }
+  function closePortal() {
+    portalActive = false;
+  }
+  function updatePortal(seaY, t) {
+    if (portalActive) {
+      portalSize = Math.min(24, portalSize + 1.2);
+      // drop object if portal big enough
+      if (portalSize >= 22 && Math.random() < 0.04 && portalItems.length < 3) {
+        const fn = portalObjects[Math.floor(Math.random() * portalObjects.length)];
+        portalItems.push({ x: portalX - 3, y: portalY + 6, vy: 0, draw: fn, life: 1 });
+      }
+    } else if (portalSize > 0) {
+      portalSize = Math.max(0, portalSize - 1.5);
+    }
+    // draw portal
+    if (portalSize > 0) {
+      const r = portalSize;
+      const grad = ctx.createRadialGradient(portalX, portalY, 0, portalX, portalY, r);
+      grad.addColorStop(0, `rgba(168, 85, 247, 0.9)`);
+      grad.addColorStop(0.6, `rgba(90, 30, 180, 0.5)`);
+      grad.addColorStop(1, 'rgba(40, 10, 80, 0)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(portalX - r, portalY - r, r * 2, r * 2);
+      // swirl pixels
+      for (let a = 0; a < 8; a++) {
+        const ang = (t * 0.08) + a * (Math.PI * 2 / 8);
+        const rr = r * 0.6;
+        px(portalX + Math.cos(ang) * rr, portalY + Math.sin(ang) * rr, 2, 2, rgba(220, 180, 255, 0.9));
+      }
+    }
+    // falling items
+    for (let i = portalItems.length - 1; i >= 0; i--) {
+      const o = portalItems[i];
+      o.vy += 0.18;
+      o.y += o.vy;
+      if (o.y >= seaY - 2) {
+        // splash
+        for (let s = 0; s < 6; s++) {
+          px(o.x + (Math.random() - 0.5) * 8, seaY - Math.random() * 4, 2, 1, rgba(200, 230, 240, 0.7));
+        }
+        portalItems.splice(i, 1);
+        continue;
+      }
+      o.draw(Math.floor(o.x), Math.floor(o.y));
+    }
+  }
+
+  // === KRAKEN EASTER EGG ===
+  let tripleClickTimes = [];
+  let krakenActive = false, krakenTimer = 0;
+  let tentacles = [];
+
+  function spawnKraken() {
+    krakenActive = true;
+    krakenTimer = 600; // 10s max
+    tentacles = [];
+    for (let i = 0; i < 3; i++) {
+      tentacles.push({
+        offsetX: (i - 1) * 24, // live-tracked offset from boat
+        offsetY: 8,
+        phase: i * 2,
+        hp: 3,
+        alive: true
+      });
+    }
+  }
+
+  // tentacle base is boatScreenX + offset (live tracked) — keep identical math in draw and hitbox
+  function tentBase(tent) {
+    return { x: boatScreenX + tent.offsetX, y: boatScreenY + tent.offsetY };
+  }
+
+  function tryKrakenClick(cx, cy) {
+    if (!krakenActive) return false;
+    for (const t of tentacles) {
+      if (!t.alive) continue;
+      const b = tentBase(t);
+      // tentacle tip ~ 20px above base, same sin-wiggle as draw
+      const tx = b.x + Math.sin(t.phase) * 8;
+      const ty = b.y - 20;
+      if (Math.abs(cx - tx) < 16 && Math.abs(cy - ty) < 20) {
+        t.hp--;
+        if (t.hp <= 0) {
+          t.alive = false;
+          // explosion of ink
+          for (let i = 0; i < 15; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const sp = 2 + Math.random() * 2;
+            explosions.push({ x: tx, y: ty, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+              life: 1, size: 3, color: '#2a0a4a', gravity: 0.05 });
+          }
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function updateKraken(t) {
+    if (!krakenActive) return;
+    krakenTimer--;
+    const aliveCount = tentacles.filter(x => x.alive).length;
+    if (krakenTimer <= 0 || aliveCount === 0) {
+      krakenActive = false;
+      tentacles = [];
+      return;
+    }
+    for (const tent of tentacles) {
+      if (!tent.alive) continue;
+      tent.phase += 0.1;
+      const b = tentBase(tent); // live: follows the moving boat
+      // draw segments (3 pixel blocks with wiggle)
+      const segs = 5;
+      for (let s = 0; s < segs; s++) {
+        const sp = s / segs;
+        const wiggle = Math.sin(tent.phase + s * 0.5) * (4 + s);
+        const sx = b.x + wiggle;
+        const sy = b.y - s * 4 - sp * 4;
+        px(sx - 2, sy, 4, 4, '#4a1a6a');
+        px(sx - 1, sy + 1, 2, 2, '#6a2a8a'); // highlight
+      }
+      // tip (eye/suckers)
+      const tipX = b.x + Math.sin(tent.phase) * 8;
+      const tipY = b.y - 20;
+      px(tipX - 3, tipY, 6, 3, '#2a0a4a');
+      px(tipX - 1, tipY + 1, 2, 1, '#ff4db3'); // inner
+    }
+  }
+
   // === MAIN LOOP ===
   function frame() {
     time++;
@@ -2482,6 +3244,7 @@
       const sunPhase = (cyclePhase - 0.28) / 0.5;
       const sunX = W * (0.1 + sunPhase * 0.8);
       const sunY = H * (0.25 - 0.18 * Math.sin(sunPhase * Math.PI));
+      sunScreenX = sunX; sunScreenY = sunY;
       const sunSize = 16;
       const horizon = Math.sin(sunPhase * Math.PI);
       const sr = 255, sg = Math.round(200 + horizon*50), sb = Math.round(80 + horizon*100);
@@ -2654,11 +3417,26 @@
     // fish / dolphins jumping
     updateFish(seaY, time);
 
+    // volcano eruption (easter egg)
+    updateVolcano(seaY, mx, time);
+
     // sailboat
     drawSailboat(seaY, cyclePhase, time, mx);
 
+    // giant whale (foreground — in front of sailboat)
+    updateWhale(seaY, time);
+
+    // kraken (grabs boat)
+    updateKraken(time);
+
     // ambient fireworks (night)
     updateAmbientFireworks(dayAmount, time);
+
+    // sky portal (right-click hold)
+    updatePortal(seaY, time);
+
+    // storm overlay (rain + lightning)
+    updateStorm(seaY, time);
 
     // UFO (easter egg)
     drawUFO(time);
