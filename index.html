@@ -1221,6 +1221,28 @@
   const CYCLE_DURATION = 60;
   const PX = 4; // pixel block size
 
+  /* ===== NEW FEATURES STATE ===== */
+  // 1. COMET (rare shooting star with trail)
+  let cometActive = false;
+  let cometX = 0, cometY = 0, cometVX = 0, cometVY = 0;
+  let cometTrail = [];
+  let nextCometAt = 600 + Math.random() * 1800; // 10-40s from start
+
+  // 2. UNDERWATER / DIVE mode
+  let diving = false;           // true when camera is underwater
+  let diveT = 0;                // 0..1 transition progress
+  let diveDir = 0;              // +1 descending, -1 ascending, 0 idle
+  const jellyfish = [];         // spawned once on first dive
+  const fishes = [];
+  const bubbles = [];
+  let diveInitialized = false;
+
+  // 3. LIGHTHOUSE (on left bay cliff)
+  // fixed position in bay; angle rotates continuously
+  let lighthouseAngle = 0;
+
+  // 4. CITY REFLECTION — no extra state; uses buildings[] at render time
+
   const skyPhases = [
     { at: 0.00, top: [6,6,18],     mid: [10,10,30],    bot: [14,14,38]   },
     { at: 0.15, top: [12,10,32],   mid: [18,14,42],    bot: [28,18,52]   },
@@ -1467,6 +1489,22 @@
 
     const seaY_ = H * 0.55;
 
+    // DIVE: click below sea level when not already diving/surfacing → dive down
+    // any click while underwater → surface
+    if (diving || diveT > 0) {
+      diveDir = -1; // surface
+      return;
+    }
+    if (cy > seaY_ + 20 && cy < H - 10 && !diving) {
+      // skip if click overlaps interactive sprites near water
+      const boatNear = (Math.abs(cx - boatScreenX) < 30 && Math.abs(cy - boatScreenY) < 40);
+      if (!boatNear) {
+        diving = true;
+        diveDir = 1;
+        return;
+      }
+    }
+
     // volcano: 5 clicks on the tallest mountain peak
     if (tryVolcanoClick(cx, cy, seaY_)) return;
 
@@ -1553,7 +1591,16 @@
   window.addEventListener('keydown', e => {
     if (!heroInView) return;
     if (e.key === 's' || e.key === 'S') { triggerStorm(); }
+    if (e.key === 'c' || e.key === 'C') { if (!cometActive) spawnComet(); }
+    if (e.key === 'd' || e.key === 'D') {
+      if (diving || diveT > 0) { diveDir = -1; }
+      else { diving = true; diveDir = 1; }
+    }
   });
+  // debug hooks
+  window.__triggerDive = () => { diving = true; diveDir = 1; };
+  window.__triggerSurface = () => { diveDir = -1; };
+  window.__triggerComet = () => { if (!cometActive) spawnComet(); };
 
   // Sky portal — right-click hold in upper-sky zone of the canvas only.
   // Keep native context menu working on the CTA link and hero text.
@@ -2761,19 +2808,23 @@
   // === GIANT WHALE (foreground) ===
   let whale = null;
   let nextWhale = 1500 + Math.random() * 1800; // ~25-55s first appearance
-  const WHALE_LEN = 80; // total body length in px
-  const WHALE_MAX_H = 10; // max above-water body height
+  const WHALE_LEN = 90; // total body length in px
+  const WHALE_MAX_H = 11; // max above-water body height
 
   function spawnWhale() {
     const dir = Math.random() > 0.5 ? 1 : -1;
     whale = {
       x: dir > 0 ? -WHALE_LEN - 20 : W + 20,
       dir,
-      vx: dir * 0.3,
-      surfaceAt: W * (0.35 + Math.random() * 0.3),
+      vx: dir * 0.28,
+      // surface far from the shore — city sits at x=0.25..0.55 of W;
+      // whale surfaces in the lower/outer part of the bay, closer to the foreground water
+      surfaceAt: W * (0.55 + Math.random() * 0.35),
       spouts: [],
       splashes: [],
-      blown: false
+      wake: [],
+      blowCount: 0,      // how many spouts emitted this surfacing
+      lastBlowT: 0,      // last spout time
     };
   }
 
@@ -2781,6 +2832,10 @@
     if (!whale && t > nextWhale) { spawnWhale(); nextWhale = t + 2400 + Math.random() * 3000; }
     if (!whale) return;
     whale.x += whale.vx;
+
+    // render whale lower in the water (farther from shore in perspective)
+    // offset entire whale visual ~50px below the horizon
+    const whaleSeaY = seaY + 55;
 
     // surfacing dist from the surface point
     const headFrontX = whale.x + (whale.dir > 0 ? WHALE_LEN * 0.9 : WHALE_LEN * 0.1);
@@ -2791,80 +2846,154 @@
     const visibleH = depth * WHALE_MAX_H;
 
     // color palette for the whale (dark grey-blue with highlights)
-    const bodyDark = '#1f242e';
-    const bodyMid = '#2b3140';
-    const bodyLight = '#4a5568';
+    const bodyDark = '#1a1f28';
+    const bodyMid = '#2a3140';
+    const bodyLight = '#4a5468';
+    const bellyLight = '#5a6578';
 
     if (depth > 0.04) {
-      // body drawn as vertical slices using a body profile
-      // profile: narrow at both ends, bulky in middle, skewed so head is fatter than tail
+      // === BODY ===
+      // profile: humpback-style — wide round head, thick mid-body, narrowing peduncle at tail
+      // front of movement is the head (n=0), tail is n=1
       for (let col = 0; col < WHALE_LEN; col++) {
         const n = col / (WHALE_LEN - 1);
-        // whale body shape: sin curve with front-heavy skew
-        // head at n=0, tail at n=1 (assuming dir=1)
-        const shape = Math.sin(Math.pow(n, 1.15) * Math.PI) * (1 - n * 0.35);
+        // body top profile: broad arch, flatter middle (like a humpback's back)
+        // use an asymmetric bell curve, bulkier toward front
+        const headFactor = 1 - Math.pow(Math.max(0, 0.1 - n) / 0.1, 2) * 0.3; // slight taper at head tip
+        const tailFactor = Math.pow(1 - Math.max(0, n - 0.55) / 0.45, 1.4); // narrowing toward tail
+        const midBulk = Math.sin(Math.pow(n, 0.9) * Math.PI); // base arch
+        const shape = midBulk * headFactor * (0.4 + 0.6 * tailFactor);
         const colH = shape * visibleH;
-        if (colH < 0.4) continue;
-        // head (n=0) is the leading edge in movement direction
+        if (colH < 0.35) continue;
+
         const x = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - col) : Math.floor(whale.x + col);
         const h = Math.max(1, Math.ceil(colH));
-        const topY = Math.floor(seaY - colH);
-        // main body
-        px(x, topY, 1, h + 2, bodyMid);
-        // darker bottom (underside shadow at waterline)
-        px(x, seaY - 1, 1, 2, bodyDark);
-        // top highlight ridge (lit from above)
-        if (h > 2) px(x, topY, 1, 1, bodyLight);
+        const topY = Math.floor(whaleSeaY - colH);
+
+        // main body mid tone
+        px(x, topY, 1, h, bodyMid);
+        // waterline darker band (shadow under belly meeting water)
+        px(x, whaleSeaY - 1, 1, 2, bodyDark);
+        // top ridge highlight (lit from above-right)
+        if (h >= 2) px(x, topY, 1, 1, bodyLight);
+        // extra highlight on upper-back second row for rounded feel
+        if (h >= 4) px(x, topY + 1, 1, 1, bodyMid);
       }
 
-      // dorsal hump at n≈0.58 — slight bump on the back
-      if (depth > 0.4) {
-        const humpN = 0.58;
-        const humpCol = Math.floor(WHALE_LEN * humpN);
-        const humpX = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - humpCol) : Math.floor(whale.x + humpCol);
-        const baseH = Math.sin(Math.pow(humpN, 1.15) * Math.PI) * (1 - humpN * 0.35) * visibleH;
-        const humpH = Math.round(depth * 3);
-        if (humpH > 0) {
-          px(humpX - 1, Math.floor(seaY - baseH - humpH), 3, humpH, bodyMid);
-          px(humpX, Math.floor(seaY - baseH - humpH), 1, 1, bodyLight);
+      // === DORSAL FIN === (small hooked fin at n≈0.62)
+      if (depth > 0.5) {
+        const finN = 0.62;
+        const finCol = Math.floor(WHALE_LEN * finN);
+        const finX = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - finCol) : Math.floor(whale.x + finCol);
+        const midBulk = Math.sin(Math.pow(finN, 0.9) * Math.PI);
+        const tailFactor = Math.pow(1 - (finN - 0.55) / 0.45, 1.4);
+        const baseH = midBulk * (0.4 + 0.6 * tailFactor) * visibleH;
+        const finH = Math.round(depth * 4);
+        if (finH > 0) {
+          const finTopY = Math.floor(whaleSeaY - baseH - finH);
+          // triangular fin, slightly swept back (opposite to movement dir)
+          const sweep = -whale.dir;
+          for (let fy = 0; fy < finH; fy++) {
+            const w = Math.max(1, finH - fy);
+            const fx = finX + Math.round(sweep * fy * 0.4);
+            px(fx, finTopY + fy, w, 1, fy === 0 ? bodyLight : bodyMid);
+          }
         }
       }
 
-      // eye — small white pixel on the head (n ≈ 0.12)
-      if (depth > 0.75) {
-        const eyeN = 0.12;
-        const eyeCol = Math.floor(WHALE_LEN * eyeN);
-        const eyeX = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - eyeCol) : Math.floor(whale.x + eyeCol);
-        const baseH = Math.sin(Math.pow(eyeN, 1.15) * Math.PI) * (1 - eyeN * 0.35) * visibleH;
-        px(eyeX, Math.floor(seaY - baseH + 1), 1, 1, '#f0f0f8');
-      }
-
-      // mouth line — small dark line near front under the head
-      if (depth > 0.7) {
-        const mouthN = 0.06;
-        const mouthCol = Math.floor(WHALE_LEN * mouthN);
-        const mouthX = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - mouthCol) : Math.floor(whale.x + mouthCol);
-        px(mouthX - 2, seaY - 1, 5, 1, bodyDark);
-      }
-
-      // blowhole spout (one-time per surfacing) — near top of head
-      const blowN = 0.25;
-      if (depth > 0.88 && !whale.blown) {
-        whale.blown = true;
-        const blowCol = Math.floor(WHALE_LEN * blowN);
-        const blowX = whale.dir > 0 ? whale.x + WHALE_LEN - 1 - blowCol : whale.x + blowCol;
-        const blowBaseH = Math.sin(Math.pow(blowN, 1.15) * Math.PI) * (1 - blowN * 0.35) * visibleH;
-        const blowY = seaY - blowBaseH - 2;
-        for (let i = 0; i < 22; i++) {
-          whale.spouts.push({
-            x: blowX + (Math.random() - 0.5) * 2, y: blowY,
-            vx: (Math.random() - 0.5) * 1.6,
-            vy: -(3 + Math.random() * 2.5),
+      // === PECTORAL FIN === (side flipper, visible as small protrusion at waterline near head, n≈0.22)
+      if (depth > 0.65) {
+        const pecN = 0.22;
+        const pecCol = Math.floor(WHALE_LEN * pecN);
+        const pecX = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - pecCol) : Math.floor(whale.x + pecCol);
+        // flipper extends slightly forward (toward head) and down into water
+        const flipOffset = whale.dir; // toward head
+        const flipH = Math.round(depth * 2) + 1;
+        for (let i = 0; i < 4; i++) {
+          px(pecX + flipOffset * i, whaleSeaY + Math.round(i * 0.4), Math.max(1, 3 - i), 1, bodyDark);
+        }
+        // small white splash where flipper meets water
+        if (Math.random() < 0.15) {
+          whale.splashes.push({
+            x: pecX + flipOffset, y: whaleSeaY,
+            vx: flipOffset * 0.3, vy: -0.4 - Math.random() * 0.5,
             life: 1
           });
         }
       }
-      if (depth < 0.6) whale.blown = false;
+
+      // === EYE === small white dot on side of head
+      if (depth > 0.78) {
+        const eyeN = 0.1;
+        const eyeCol = Math.floor(WHALE_LEN * eyeN);
+        const eyeX = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - eyeCol) : Math.floor(whale.x + eyeCol);
+        const midBulk = Math.sin(Math.pow(eyeN, 0.9) * Math.PI);
+        const baseH = midBulk * visibleH;
+        px(eyeX, Math.floor(whaleSeaY - baseH * 0.35), 1, 1, '#e8ecf2');
+      }
+
+      // === MOUTH LINE === subtle line on underside of head
+      if (depth > 0.72) {
+        const mouthN = 0.04;
+        const mouthCol = Math.floor(WHALE_LEN * mouthN);
+        const mouthX = whale.dir > 0 ? Math.floor(whale.x + WHALE_LEN - 1 - mouthCol) : Math.floor(whale.x + mouthCol);
+        px(mouthX - (whale.dir > 0 ? 4 : 0), whaleSeaY - 1, 5, 1, bodyDark);
+      }
+
+      // === BLOWHOLE SPOUT === pulsing V-shaped water jet, multiple blows while surfaced
+      const blowN = 0.2;
+      const blowCol = Math.floor(WHALE_LEN * blowN);
+      const blowX = whale.dir > 0 ? whale.x + WHALE_LEN - 1 - blowCol : whale.x + blowCol;
+      const midBulkBlow = Math.sin(Math.pow(blowN, 0.9) * Math.PI);
+      const blowBaseH = midBulkBlow * visibleH;
+      const blowY = whaleSeaY - blowBaseH;
+
+      // emit spout puffs while peak surfaced, max 3 blows, ~90 frames apart
+      if (depth > 0.85 && whale.blowCount < 3 && t - whale.lastBlowT > 90) {
+        whale.lastBlowT = t;
+        whale.blowCount++;
+        // burst of particles — V-spread pattern
+        for (let i = 0; i < 40; i++) {
+          const spread = (Math.random() - 0.5) * 2; // -1..1
+          whale.spouts.push({
+            x: blowX + spread * 1.5,
+            y: blowY - 1,
+            vx: spread * 1.8,
+            vy: -(4.2 + Math.random() * 2.8),
+            life: 1,
+            size: Math.random() < 0.4 ? 2 : 1,
+          });
+        }
+        // small splash at base of spout
+        for (let i = 0; i < 6; i++) {
+          whale.splashes.push({
+            x: blowX + (Math.random() - 0.5) * 3, y: whaleSeaY,
+            vx: (Math.random() - 0.5) * 1.2,
+            vy: -(0.8 + Math.random() * 1.2),
+            life: 1
+          });
+        }
+      }
+      if (depth < 0.5) whale.blowCount = 0; // reset for next surfacing
+    }
+
+    // === WAKE === trailing foam line on water surface behind the whale
+    if (depth > 0.3 && Math.random() < 0.25) {
+      const tailEndX = whale.dir > 0 ? whale.x - 1 : whale.x + WHALE_LEN + 1;
+      whale.wake.push({
+        x: tailEndX + (Math.random() - 0.5) * 4,
+        y: whaleSeaY,
+        life: 1,
+        dir: whale.dir
+      });
+    }
+    for (let i = whale.wake.length - 1; i >= 0; i--) {
+      const w = whale.wake[i];
+      w.life -= 0.008;
+      w.x -= w.dir * 0.15; // foam drifts opposite to whale motion
+      if (w.life <= 0) { whale.wake.splice(i, 1); continue; }
+      px(w.x, w.y, 2, 1, rgba(220, 230, 240, w.life * 0.45));
+      if (Math.random() < 0.3) px(w.x + (Math.random() < 0.5 ? -1 : 2), w.y, 1, 1, rgba(220, 230, 240, w.life * 0.3));
     }
 
     // tail fluke (V-shape) rising just before dive-out on the trailing side
@@ -2875,19 +3004,19 @@
       const p = (diveDist - zone * 0.55) / (zone * 0.4);
       const lift = Math.sin(p * Math.PI) * 14;
       const tailBaseX = whale.dir > 0 ? whale.x - 2 : whale.x + WHALE_LEN + 2;
-      const flukeY = seaY - lift;
+      const flukeY = whaleSeaY - lift;
       // V-shaped horizontal fluke
       px(tailBaseX - 7, flukeY + 6, 14, 2, bodyDark);
       px(tailBaseX - 5, flukeY + 4, 10, 2, bodyMid);
       px(tailBaseX - 3, flukeY + 2, 6, 2, bodyMid);
       px(tailBaseX - 1, flukeY, 2, 2, bodyLight);
       // base stem connecting tail to water
-      px(tailBaseX - 1, seaY - 2, 2, 3, bodyDark);
+      px(tailBaseX - 1, whaleSeaY - 2, 2, 3, bodyDark);
       // splash spawns when tail slaps
       if (p > 0.3 && p < 0.6 && t % 3 === 0) {
         for (let i = 0; i < 4; i++) {
           whale.splashes.push({
-            x: tailBaseX + (Math.random() - 0.5) * 14, y: seaY - 2,
+            x: tailBaseX + (Math.random() - 0.5) * 14, y: whaleSeaY - 2,
             vx: (Math.random() - 0.5) * 1.8,
             vy: -(1 + Math.random() * 1.8),
             life: 1
@@ -2896,12 +3025,33 @@
       }
     }
 
-    // update spout particles
+    // update spout particles — dense mist + droplets falling back into water
     for (let i = whale.spouts.length - 1; i >= 0; i--) {
       const p = whale.spouts[i];
-      p.x += p.vx; p.y += p.vy; p.vy += 0.14; p.life -= 0.018;
-      if (p.life <= 0) { whale.spouts.splice(i, 1); continue; }
-      px(p.x, p.y, 2, 2, rgba(220, 235, 250, p.life * 0.85));
+      p.x += p.vx; p.y += p.vy;
+      p.vy += 0.18;           // gravity
+      p.vx *= 0.99;           // air drag
+      p.life -= 0.014;
+      // particle dies if it hits the water surface (splash effect)
+      const hitWater = p.y >= whaleSeaY;
+      if (p.life <= 0 || hitWater) {
+        if (hitWater && p.life > 0.2) {
+          // small splash where droplet hits water
+          whale.splashes.push({
+            x: p.x, y: whaleSeaY,
+            vx: p.vx * 0.3, vy: -0.4 - Math.random() * 0.4,
+            life: 0.6
+          });
+        }
+        whale.spouts.splice(i, 1);
+        continue;
+      }
+      // denser/brighter when fresh, fades to misty grey
+      const alpha = Math.min(1, p.life * 1.1);
+      const sz = p.size || 1;
+      px(p.x, p.y, sz, sz, rgba(235, 245, 255, alpha * 0.9));
+      // white core highlight on larger droplets
+      if (sz === 2 && p.life > 0.6) px(p.x, p.y, 1, 1, rgba(255, 255, 255, alpha * 0.6));
     }
     // update splashes
     for (let i = whale.splashes.length - 1; i >= 0; i--) {
@@ -3217,6 +3367,512 @@
     }
   }
 
+  // === NEW FEATURE HELPERS ===
+
+  // -- COMET --
+  function spawnComet() {
+    cometActive = true;
+    // launch from top-right, arc down-left, slower so it's actually visible
+    cometX = W * (0.75 + Math.random() * 0.2);
+    cometY = -20;
+    const angle = Math.PI * (0.58 + Math.random() * 0.12); // down-leftish
+    const speed = 2.8 + Math.random() * 1.2; // much slower, more graceful
+    cometVX = Math.cos(angle) * speed;
+    cometVY = Math.sin(angle) * speed;
+    cometTrail = [];
+  }
+  function updateComet(starAlpha, dayAmount) {
+    // only during night (starAlpha high) otherwise keep counting
+    if (!cometActive) {
+      if (starAlpha > 0.5 && --nextCometAt <= 0) {
+        spawnComet();
+        nextCometAt = 1800 + Math.random() * 3600; // 30-90s until next
+      }
+      return;
+    }
+    // move comet
+    cometX += cometVX;
+    cometY += cometVY;
+    cometVY += 0.02; // tiny gravity for arc
+    cometTrail.push({ x: cometX, y: cometY, life: 1 });
+    if (cometTrail.length > 180) cometTrail.shift();
+
+    // draw trail (thick fading streak)
+    for (let i = 0; i < cometTrail.length; i++) {
+      const p = cometTrail[i];
+      p.life -= 0.006;
+      if (p.life <= 0) continue;
+      const age = i / cometTrail.length; // 0 old -> 1 new
+      const a = p.life * age;
+      const thick = Math.max(1, Math.floor(age * 4));
+      px(p.x, p.y, thick, thick, rgba(255, 240, 200, a));
+      if (age > 0.5) px(p.x, p.y, thick + 3, 1, rgba(255, 200, 120, a * 0.7));
+      if (age > 0.85) px(p.x, p.y, thick + 5, 1, rgba(255, 180, 100, a * 0.5));
+    }
+    // head — bright white core + warm glow
+    if (cometY < H + 30 && cometX > -30) {
+      px(cometX - 1, cometY - 1, 3, 3, 'rgba(255,255,240,0.95)');
+      px(cometX, cometY, 2, 2, '#ffffff');
+      // glow halo
+      const g = ctx.createRadialGradient(cometX, cometY, 2, cometX, cometY, 30);
+      g.addColorStop(0, 'rgba(255,240,200,0.5)');
+      g.addColorStop(0.4, 'rgba(255,180,120,0.15)');
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.fillRect(cometX - 30, cometY - 30, 60, 60);
+    }
+    // end when offscreen
+    if (cometY > H + 40 || cometX < -60) {
+      cometActive = false;
+      cometTrail = [];
+    }
+  }
+
+  // -- LIGHTHOUSE (left cliff, rotating beam) --
+  function drawLighthouse(seaY, dayAmount, starAlpha, mx, t) {
+    // position on left bay cliff
+    const ox = mx * W * 0.04;
+    const lx = Math.floor(W * 0.08 + ox);
+    const ly = Math.floor(seaY - 48);
+    const towerW = 6, towerH = 32;
+    // tower (white+red striped)
+    for (let i = 0; i < towerH; i += 4) {
+      const stripe = Math.floor(i / 4) % 2 === 0;
+      px(lx, ly + i, towerW, 4, stripe ? '#e8e8ec' : '#c03030');
+    }
+    // base (wider darker)
+    px(lx - 2, ly + towerH, towerW + 4, 4, '#3a3a42');
+    px(lx - 1, ly + towerH + 4, towerW + 2, 3, '#2a2a30');
+    // lantern room
+    px(lx - 1, ly - 8, towerW + 2, 6, '#e8e8ec');
+    px(lx - 1, ly - 10, towerW + 2, 2, '#c03030');
+    // lantern light core (pulsing, night only)
+    const lampNightCore = Math.max(0, (starAlpha - 0.15) / 0.5);
+    const pulse = (0.4 + Math.sin(t * 0.1) * 0.25) * lampNightCore;
+    const coreColor = rgba(255, 240, 160, pulse);
+    px(lx + 1, ly - 6, towerW - 2, 2, coreColor);
+    // roof spike
+    px(lx + towerW/2 - 0.5, ly - 14, 1, 4, '#2a2a30');
+    // little glow around lantern — night only
+    const lampNight = Math.max(0, (starAlpha - 0.15) / 0.5);
+    if (lampNight > 0.02) {
+      const lamp = ctx.createRadialGradient(lx + towerW/2, ly - 5, 2, lx + towerW/2, ly - 5, 28);
+      lamp.addColorStop(0, `rgba(255,230,160,${0.35 * lampNight})`);
+      lamp.addColorStop(1, 'transparent');
+      ctx.fillStyle = lamp;
+      ctx.fillRect(lx - 28, ly - 33, 56 + towerW, 56);
+    }
+
+    // rotating beam — night-only
+    lighthouseAngle += 0.012;
+    // only active when stars are visible (nighttime)
+    const beamNightGate = Math.max(0, (starAlpha - 0.15) / 0.5); // 0 day .. 1 deep night
+    const beamStrength = 0.30 * beamNightGate;
+    const bx = lx + towerW / 2;
+    const by = ly - 5;
+    // beam sweeps a narrow cone; render as triangle, rotated
+    const coneHalf = 0.055; // ~6deg cone (much narrower)
+    const reach = W * 0.95;
+    // single beam pass (outward only)
+    const ang = lighthouseAngle;
+    // only render when beam points to the right (outward from cliff)
+    const cosA = Math.cos(ang);
+    if (cosA > 0.15 && beamStrength > 0.01) {
+      const aimFade = Math.min(1, (cosA - 0.15) / 0.4); // soft fade as beam swings toward horizon
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.rotate(ang);
+      const grd = ctx.createLinearGradient(0, 0, reach, 0);
+      grd.addColorStop(0, `rgba(255,240,180,${beamStrength * aimFade})`);
+      grd.addColorStop(0.3, `rgba(255,230,160,${beamStrength * 0.5 * aimFade})`);
+      grd.addColorStop(0.7, `rgba(255,220,150,${beamStrength * 0.15 * aimFade})`);
+      grd.addColorStop(1, 'transparent');
+      ctx.fillStyle = grd;
+      ctx.globalCompositeOperation = 'screen';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(reach, -reach * coneHalf);
+      ctx.lineTo(reach, reach * coneHalf);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // -- CITY REFLECTION in water (mirrored with wave distortion) --
+  function drawCityReflection(seaY, dayAmount, mx, t) {
+    if (!buildings || !buildings.length) return;
+    const ox = mx * W * 0.03;
+    const snap = v => Math.round(v / PX) * PX || PX;
+    const fade = dayAmount < 0.4 ? 0.22 : 0.12;
+
+    ctx.save();
+    // clip to below horizon so reflection never leaks above seaY
+    ctx.beginPath();
+    ctx.rect(0, seaY, W, H - seaY);
+    ctx.clip();
+
+    for (const b of buildings) {
+      const bw = snap(b.wFrac * W);
+      const bh = snap(b.hFrac * H);
+      const bx = Math.floor(b.x * W + ox);
+      const reflTop = seaY;
+      const reflH = Math.min(bh, H - seaY);
+
+      const wr = Math.round(lerpVal(b.color[0] * 0.08, b.color[0] * 0.55, dayAmount));
+      const wg = Math.round(lerpVal(b.color[1] * 0.08, b.color[1] * 0.55, dayAmount));
+      const wb = Math.round(lerpVal(b.color[2] * 0.15, b.color[2] * 0.6, dayAmount));
+
+      // draw mirrored as horizontal slices, each shifted by a sine wave = liquid shimmer
+      for (let i = 0; i < reflH; i += PX) {
+        // slice corresponds to building height `bh - i` from top of reflection
+        const wave = Math.sin((i * 0.12) + t * 0.04 + b.x * 9) * (1 + i * 0.05);
+        const a = fade * (1 - i / reflH) * 0.9;
+        if (a < 0.015) continue;
+        px(bx + wave, reflTop + i, bw, PX, rgb(wr, wg, wb), a);
+      }
+      // lit-window streaks at night
+      if (dayAmount < 0.4) {
+        const glowA = (0.4 - dayAmount) * 0.35;
+        const wave = Math.sin(t * 0.05 + b.x * 9) * 2;
+        px(bx + wave, reflTop, bw, 2, rgba(255, 210, 120, glowA));
+      }
+    }
+    ctx.restore();
+  }
+
+  // -- UNDERWATER SCENE --
+  function initUnderwater() {
+    if (diveInitialized) return;
+    diveInitialized = true;
+    // jellyfish
+    for (let i = 0; i < 5; i++) {
+      jellyfish.push({
+        x: Math.random() * W,
+        y: H * (0.25 + Math.random() * 0.5),
+        size: 6 + Math.random() * 6,
+        phase: Math.random() * Math.PI * 2,
+        vy: -0.12 - Math.random() * 0.12,
+        color: Math.random() > 0.5 ? [255, 120, 200] : [150, 200, 255]
+      });
+    }
+    // small fish schools
+    for (let i = 0; i < 12; i++) {
+      fishes.push({
+        x: Math.random() * W,
+        y: H * (0.4 + Math.random() * 0.45),
+        vx: (Math.random() > 0.5 ? 1 : -1) * (0.8 + Math.random() * 0.6),
+        size: 2 + Math.floor(Math.random() * 2) * 2,
+        color: ['#ffd04a', '#ff7a66', '#7ab6ff', '#b3ff78'][Math.floor(Math.random() * 4)],
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+  function updateDive() {
+    if (diveDir > 0) {
+      diveT = Math.min(1, diveT + 0.025);
+      if (diveT >= 1) diveDir = 0;
+    } else if (diveDir < 0) {
+      diveT = Math.max(0, diveT - 0.03);
+      if (diveT <= 0) { diveDir = 0; diving = false; }
+    }
+  }
+  // === BATHYSCAPHE (giant orange submersible, arrives during dive) ===
+  let bathyscaphe = null;
+  function spawnBathyscaphe() {
+    const dir = Math.random() > 0.5 ? 1 : -1;
+    bathyscaphe = {
+      x: dir > 0 ? -180 : W + 180,
+      y: H * (0.55 + Math.random() * 0.2),
+      vx: dir * 0.35,
+      bob: Math.random() * Math.PI * 2,
+      dir,
+      bubbles: [],
+      propPhase: 0,
+    };
+  }
+  function drawBathyscaphe(t) {
+    if (diveT < 0.85) { bathyscaphe = null; return; }
+    if (!bathyscaphe) spawnBathyscaphe();
+    const b = bathyscaphe;
+    b.x += b.vx;
+    b.bob += 0.02;
+    b.propPhase += 0.35;
+    const cy = Math.floor(b.y + Math.sin(b.bob) * 3);
+    const cx = Math.floor(b.x);
+    const d = b.dir; // 1=right, -1=left
+    const a = diveT;
+
+    // === HULL === big oval capsule ~120x46 px, orange-red
+    const hullW = 120, hullH = 46;
+    const hullColors = {
+      shadow: `rgba(120, 45, 10, ${a})`,
+      mid:    `rgba(220, 95, 30, ${a})`,
+      light:  `rgba(255, 145, 55, ${a})`,
+      highlight: `rgba(255, 200, 120, ${a})`,
+      dark:   `rgba(80, 30, 10, ${a})`,
+    };
+    // draw hull as vertical slices using an elliptical profile
+    for (let ix = 0; ix < hullW; ix++) {
+      const n = (ix - hullW/2) / (hullW/2); // -1..1
+      // rounded capsule: flat middle 40%, rounded 30% on each side
+      let profile;
+      const absn = Math.abs(n);
+      if (absn < 0.4) profile = 1;
+      else profile = Math.sqrt(Math.max(0, 1 - Math.pow((absn - 0.4) / 0.6, 2)));
+      const h = Math.round(profile * hullH);
+      if (h <= 0) continue;
+      const x = cx + ix - hullW/2;
+      const topY = cy - h/2;
+      // main body
+      px(x, topY, 1, h, hullColors.mid);
+      // darker bottom shadow
+      px(x, topY + h - 3, 1, 3, hullColors.shadow);
+      // lighter top highlight strip
+      px(x, topY + 1, 1, 2, hullColors.light);
+      // thin specular highlight at very top
+      px(x, topY, 1, 1, hullColors.highlight);
+      // rivet row
+      if ((ix % 14) === 7 && h > 20) px(x, topY + Math.floor(h * 0.55), 1, 1, hullColors.dark);
+    }
+
+    // === FRONT DOME (viewport) === on leading side
+    const domeCx = cx + d * 42;
+    const domeR = 12;
+    // glass dome — cyan/white gradient
+    for (let dx = -domeR; dx <= domeR; dx++) {
+      for (let dy = -domeR; dy <= domeR; dy++) {
+        const dd = Math.sqrt(dx*dx + dy*dy);
+        if (dd > domeR) continue;
+        const shade = 1 - dd / domeR;
+        const rC = Math.round(80 + shade * 160);
+        const gC = Math.round(140 + shade * 100);
+        const bC = Math.round(180 + shade * 70);
+        px(domeCx + dx, cy + dy - 2, 1, 1, `rgba(${rC},${gC},${bC}, ${a * 0.95})`);
+      }
+    }
+    // bright highlight on dome
+    px(domeCx - d * 3, cy - 5, 3, 2, `rgba(255,255,255,${a * 0.9})`);
+    px(domeCx - d * 4, cy - 7, 2, 1, `rgba(255,255,255,${a * 0.7})`);
+    // dome frame (dark ring) - rough outline
+    for (let ang = 0; ang < Math.PI * 2; ang += 0.1) {
+      const rx = Math.round(Math.cos(ang) * domeR);
+      const ry = Math.round(Math.sin(ang) * domeR);
+      px(domeCx + rx, cy + ry - 2, 1, 1, hullColors.dark);
+    }
+
+    // === CONNING TOWER === small raised box on top
+    const towerX = cx - d * 8;
+    px(towerX - 10, cy - hullH/2 - 8, 20, 10, hullColors.mid);
+    px(towerX - 10, cy - hullH/2 - 8, 20, 2, hullColors.light);
+    px(towerX - 10, cy - hullH/2 - 8, 20, 1, hullColors.highlight);
+    // tower porthole
+    px(towerX - 2, cy - hullH/2 - 5, 4, 4, `rgba(180, 220, 255, ${a * 0.9})`);
+    px(towerX - 1, cy - hullH/2 - 4, 2, 2, `rgba(255,255,255,${a * 0.8})`);
+    // antenna
+    px(towerX + 6, cy - hullH/2 - 14, 1, 6, hullColors.dark);
+    px(towerX + 6, cy - hullH/2 - 15, 1, 1, `rgba(255,60,60,${a * (0.5 + 0.5*Math.sin(t*0.2))})`);
+
+    // === SIDE PORTHOLES === 3 round windows along hull
+    for (let p = 0; p < 3; p++) {
+      const phx = cx + (p - 1) * 22;
+      // skip if overlapping dome
+      if (Math.abs(phx - domeCx) < 14) continue;
+      // frame
+      for (let fx = -4; fx <= 4; fx++) for (let fy = -4; fy <= 4; fy++) {
+        if (fx*fx + fy*fy > 16 || fx*fx + fy*fy < 9) continue;
+        px(phx + fx, cy + fy - 2, 1, 1, hullColors.dark);
+      }
+      // glass
+      for (let fx = -3; fx <= 3; fx++) for (let fy = -3; fy <= 3; fy++) {
+        if (fx*fx + fy*fy > 9) continue;
+        px(phx + fx, cy + fy - 2, 1, 1, `rgba(255, 230, 120, ${a * 0.85})`);
+      }
+      // highlight
+      px(phx - 1, cy - 4, 1, 1, `rgba(255,255,255,${a})`);
+    }
+
+    // === FINS / STABILIZERS === at rear
+    const rearX = cx - d * 52;
+    // top fin
+    px(rearX, cy - hullH/2 - 6, Math.abs(d) * 4 * -d, 8, hullColors.shadow);
+    for (let fy = 0; fy < 8; fy++) {
+      const fw = 8 - fy;
+      px(rearX - d * fy, cy - hullH/2 - 6 + fy, d * fw, 1, hullColors.mid);
+    }
+    // bottom fin
+    for (let fy = 0; fy < 6; fy++) {
+      const fw = 6 - fy;
+      px(rearX - d * fy, cy + hullH/2 - 2 + fy, d * fw, 1, hullColors.mid);
+    }
+
+    // === PROPELLER === rotating, behind rear
+    const propX = cx - d * 62;
+    const propSpin = Math.sin(b.propPhase);
+    const propW = Math.max(1, Math.abs(Math.round(propSpin * 4)));
+    px(propX - d * 2, cy - 8, 2, 16, hullColors.dark);       // shaft hub
+    px(propX - d * 4, cy - propW * 2, 2, propW * 4, `rgba(60,60,70,${a * 0.7})`); // spinning blade blur
+    px(propX - d * 4, cy - 1, 2, 2, `rgba(200,200,210,${a})`); // center boss
+
+    // turbulence bubbles from prop
+    if (t % 3 === 0) {
+      b.bubbles.push({
+        x: propX - d * 8 + (Math.random() - 0.5) * 4,
+        y: cy + (Math.random() - 0.5) * 10,
+        vx: -d * (0.4 + Math.random() * 0.5),
+        vy: -0.3 - Math.random() * 0.4,
+        life: 1,
+        size: Math.random() < 0.3 ? 2 : 1,
+      });
+    }
+    for (let i = b.bubbles.length - 1; i >= 0; i--) {
+      const bb = b.bubbles[i];
+      bb.x += bb.vx; bb.y += bb.vy; bb.life -= 0.012;
+      if (bb.life <= 0) { b.bubbles.splice(i, 1); continue; }
+      px(bb.x, bb.y, bb.size, bb.size, `rgba(200,230,255,${bb.life * 0.6 * a})`);
+    }
+
+    // === HEADLIGHT BEAM === forward-facing cone from dome
+    const beamLen = 90;
+    const beamEndX = domeCx + d * beamLen;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    const beamGrd = ctx.createLinearGradient(domeCx, cy - 2, beamEndX, cy - 2);
+    beamGrd.addColorStop(0, `rgba(255, 245, 200, ${a * 0.35})`);
+    beamGrd.addColorStop(0.5, `rgba(255, 230, 170, ${a * 0.15})`);
+    beamGrd.addColorStop(1, 'transparent');
+    ctx.fillStyle = beamGrd;
+    ctx.beginPath();
+    ctx.moveTo(domeCx, cy - 2);
+    ctx.lineTo(beamEndX, cy - 2 - 20);
+    ctx.lineTo(beamEndX, cy - 2 + 20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // floating particles lit by beam
+    for (let i = 0; i < 12; i++) {
+      const fx = domeCx + d * (Math.random() * beamLen);
+      const fy = cy - 2 + (Math.random() - 0.5) * 30;
+      px(fx, fy, 1, 1, `rgba(255, 250, 220, ${Math.random() * 0.5 * a})`);
+    }
+
+    // exit
+    if ((d > 0 && cx > W + 180) || (d < 0 && cx < -180)) {
+      bathyscaphe = null;
+    }
+  }
+
+  function drawUnderwater(t) {
+    if (diveT <= 0) return;
+    initUnderwater();
+    const a = diveT;
+    // deep blue gradient overlay — fully opaque at full dive, no city bleed-through
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, `rgba(30, 80, 140, ${a})`);
+    g.addColorStop(0.5, `rgba(10, 40, 95, ${a})`);
+    g.addColorStop(1, `rgba(4, 14, 45, ${a})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    if (a < 0.2) return; // skip details until deep enough
+
+    // caustic light shafts from surface
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    for (let i = 0; i < 7; i++) {
+      const sx = ((i / 7) * W + (t * 0.3) % 80) % W;
+      const sway = Math.sin(t * 0.02 + i) * 20;
+      const grd = ctx.createLinearGradient(sx, 0, sx + sway, H);
+      grd.addColorStop(0, `rgba(180, 230, 255, ${0.12 * a})`);
+      grd.addColorStop(0.6, `rgba(120, 200, 240, ${0.04 * a})`);
+      grd.addColorStop(1, 'transparent');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.moveTo(sx - 8, 0);
+      ctx.lineTo(sx + 8, 0);
+      ctx.lineTo(sx + 40 + sway, H);
+      ctx.lineTo(sx + 20 + sway, H);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // surface ripple ceiling
+    for (let x = 0; x < W; x += 4) {
+      const y = 10 + Math.sin(t * 0.06 + x * 0.05) * 3;
+      px(x, y, 4, 2, `rgba(180, 220, 255, ${0.4 * a})`);
+    }
+
+    // jellyfish
+    for (const j of jellyfish) {
+      j.y += j.vy;
+      j.phase += 0.04;
+      if (j.y < -20) j.y = H + 10;
+      const pulse = 1 + Math.sin(j.phase) * 0.2;
+      const w = j.size * 2 * pulse;
+      const h = j.size;
+      const [r, gg, bb] = j.color;
+      // bell — rounded top
+      px(j.x - w/2, j.y, w, h, `rgba(${r},${gg},${bb},${0.45 * a})`);
+      px(j.x - w/2 + 1, j.y - 2, w - 2, 2, `rgba(${r},${gg},${bb},${0.5 * a})`);
+      px(j.x - w/2 + 2, j.y - 3, w - 4, 1, `rgba(${r},${gg},${bb},${0.55 * a})`);
+      // glow
+      const jg = ctx.createRadialGradient(j.x, j.y, 2, j.x, j.y, j.size * 3);
+      jg.addColorStop(0, `rgba(${r},${gg},${bb},${0.25 * a})`);
+      jg.addColorStop(1, 'transparent');
+      ctx.fillStyle = jg;
+      ctx.fillRect(j.x - j.size*3, j.y - j.size*3, j.size*6, j.size*6);
+      // tentacles
+      for (let tn = 0; tn < 5; tn++) {
+        const tx = j.x - w/2 + 2 + tn * ((w - 4) / 4);
+        for (let ty = 0; ty < 10; ty++) {
+          const wob = Math.sin(j.phase + tn + ty * 0.5) * 2;
+          px(tx + wob, j.y + h + ty, 1, 1, `rgba(${r},${gg},${bb},${0.35 * a * (1 - ty/10)})`);
+        }
+      }
+    }
+
+    // fish schools
+    for (const f of fishes) {
+      f.x += f.vx;
+      f.phase += 0.1;
+      f.y += Math.sin(f.phase) * 0.3;
+      if (f.vx > 0 && f.x > W + 20) f.x = -20;
+      if (f.vx < 0 && f.x < -20) f.x = W + 20;
+      const dir = f.vx > 0 ? 1 : -1;
+      px(f.x, f.y, f.size, f.size, f.color);
+      px(f.x - dir * f.size, f.y + 1, f.size, f.size - 1, f.color);
+      // tail
+      px(f.x - dir * (f.size * 1.5), f.y, 1, 2, f.color);
+    }
+
+    // bubbles rising
+    if (t % 8 === 0) {
+      bubbles.push({ x: Math.random() * W, y: H + 5, vy: -0.4 - Math.random() * 0.6, size: 1 + Math.floor(Math.random() * 3) });
+    }
+    for (let i = bubbles.length - 1; i >= 0; i--) {
+      const b = bubbles[i];
+      b.y += b.vy;
+      b.x += Math.sin(b.y * 0.05) * 0.3;
+      if (b.y < -10) { bubbles.splice(i, 1); continue; }
+      px(b.x, b.y, b.size, b.size, `rgba(220, 240, 255, ${0.35 * a})`);
+      if (b.size > 1) px(b.x, b.y, 1, 1, `rgba(255,255,255,${0.6 * a})`);
+    }
+
+    // bathyscaphe (big orange submarine that arrives while diving)
+    drawBathyscaphe(t);
+
+    // "SURFACE" hint at bottom corner
+    if (a > 0.7) {
+      ctx.save();
+      ctx.font = '8px "Press Start 2P", monospace';
+      ctx.fillStyle = `rgba(200, 230, 255, ${0.45 * (a - 0.7) / 0.3})`;
+      ctx.fillText('CLICK ANYWHERE TO SURFACE', 20, H - 20);
+      ctx.restore();
+    }
+  }
+
   // === MAIN LOOP ===
   function frame() {
     time++;
@@ -3408,6 +4064,12 @@
     // sea
     drawSea(seaY, cyclePhase, time, mx);
 
+    // lighthouse on left cliff (pre-reflection so its light glows over water too)
+    drawLighthouse(seaY, dayAmount, starAlpha, mx, time);
+
+    // city reflection in water (mirrored, wave-distorted)
+    drawCityReflection(shoreTop, dayAmount, mx, time);
+
     // water reflections
     drawWaterReflection(seaY, dayAmount, mx, time);
 
@@ -3484,6 +4146,13 @@
       px(p.x, p.y, p.size, p.size, p.color, p.life);
       if (p.life > 0.3) px(p.x-p.vx, p.y-p.vy, 2, 2, p.color, p.life*0.3);
     }
+
+    // comet — drawn over everything, rare at night or pressed 'C'
+    updateComet(starAlpha, dayAmount);
+
+    // underwater overlay — on top of whole scene when diving
+    updateDive();
+    drawUnderwater(time);
 
     // toggle daytime class
     if (daytime && !heroEl.classList.contains('daytime')) heroEl.classList.add('daytime');
