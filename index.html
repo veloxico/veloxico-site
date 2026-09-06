@@ -13,12 +13,11 @@
   <meta property="og:url" content="https://veloxico.com/">
   <meta name="twitter:card" content="summary">
   <style>
-    html { background: #181a18; color-scheme: dark; }
-    body { margin: 0; min-width: 320px; padding: 16px; box-sizing: border-box; background: radial-gradient(ellipse at 50% 30%, #30332c, #181a18 75%); }
-    main { width: 100%; min-height: calc(100svh - 32px); display: grid; place-items: center; }
+    html { --page-gap: clamp(6px, 1.2vmin, 20px); background: #181a18; color-scheme: dark; }
+    body { margin: 0; min-width: 320px; padding: var(--page-gap); box-sizing: border-box; background: radial-gradient(ellipse at 50% 30%, #30332c, #181a18 75%); }
+    main { width: 100%; height: calc(100vh - 2 * var(--page-gap)); height: calc(100dvh - 2 * var(--page-gap)); min-height: 300px; display: flex; }
     .fallback { max-width: 600px; margin: 48px auto; font: 16px/1.7 Tahoma, sans-serif; color: #f2f5eb; }
     .fallback a { color: #aaceff; }
-    @media (max-width: 560px) { body { padding: 8px; } main { min-height: calc(100svh - 16px); } }
   </style>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-J940RY2KET"></script>
@@ -33,7 +32,7 @@
 </head>
 <body>
   <noscript>
-    <style>#veloxico-xp { display: none; }</style>
+    <style>main { display: none; }</style>
     <section class="fallback">
       <h1>veloxico</h1>
       <p>I am a DevOps engineer building open-source tools that give people control over their own data.</p>
@@ -45,13 +44,13 @@
   <main aria-label="veloxico personal computer">
 <div id="veloxico-xp" lang="en" aria-label="VELOXICO: a computer from the 2000s">
   <style>
-    #veloxico-xp{--vx-plastic:#d4d0c2;--vx-ink:#172236;--vx-wire:#71818e;font-family:Tahoma,Verdana,sans-serif;color:var(--vx-ink);font-size:13px;line-height:1.45;container-type:inline-size;width:100%;padding:12px 0 25px;color-scheme:light}
+    #veloxico-xp{--vx-plastic:#d4d0c2;--vx-ink:#172236;--vx-wire:#71818e;--vx-taskbar-height:34px;font-family:Tahoma,Verdana,sans-serif;color:var(--vx-ink);font-size:13px;line-height:1.45;container-type:inline-size;width:100%;height:100%;min-height:0;color-scheme:light}
     #veloxico-xp *{box-sizing:border-box}#veloxico-xp [hidden]{display:none!important}
     #veloxico-xp button,#veloxico-xp input,#veloxico-xp a{font:inherit}#veloxico-xp button{cursor:pointer;color:inherit}#veloxico-xp button:focus-visible,#veloxico-xp a:focus-visible{outline:2px dashed #071f82;outline-offset:3px}
-    #veloxico-xp .vx-monitor{position:relative;max-width:880px;margin:0 auto;background:linear-gradient(118deg,#efede3 0%,var(--vx-plastic) 42%,#aaa99f 100%);border-radius:25px 25px 35px 35px;border:1px solid #aaa89b;padding:27px 29px 58px;box-shadow:inset 2px 2px 2px #fff8,inset -3px -4px 4px #73736377,0 14px 20px #0002}
+    #veloxico-xp .vx-monitor{position:relative;width:100%;height:100%;min-height:0;display:flex;flex-direction:column;background:linear-gradient(118deg,#efede3 0%,var(--vx-plastic) 42%,#aaa99f 100%);border-radius:25px 25px 35px 35px;border:1px solid #aaa89b;padding:clamp(15px,2vmin,27px) clamp(12px,2vmin,29px) clamp(44px,6vmin,58px);box-shadow:inset 2px 2px 2px #fff8,inset -3px -4px 4px #73736377,0 5px 12px #0002}
     #veloxico-xp .vx-top-model{position:absolute;top:7px;right:38px;font-size:10px;letter-spacing:2px;color:#76776f;text-shadow:0 1px #fff9}
-    #veloxico-xp .vx-glass{background:#242724;padding:8px;border-radius:13px;box-shadow:inset 3px 4px 5px #0009,0 1px 0 #fffc;position:relative}
-    #veloxico-xp .vx-screen{position:relative;width:100%;min-width:0;overflow:hidden;height:auto;aspect-ratio:4/3;min-height:510px;border-radius:7px;background:#2653a8;isolation:isolate}
+    #veloxico-xp .vx-glass{background:#242724;padding:8px;border-radius:13px;box-shadow:inset 3px 4px 5px #0009,0 1px 0 #fffc;position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+    #veloxico-xp .vx-screen{position:relative;width:100%;min-width:0;overflow:hidden;flex:1;min-height:0;border-radius:7px;background:#2653a8;isolation:isolate}
     #veloxico-xp .vx-wallpaper{position:absolute;inset:0;background:radial-gradient(ellipse at 70% 6%,#96d5ff99,transparent 50%),linear-gradient(#2869c6 0%,#63b8ef 61%,#a8d7ec 68%,#408534 69%);overflow:hidden;transition:filter .5s}
     #veloxico-xp .vx-wallpaper:before{content:"";position:absolute;width:120%;height:53%;left:-26%;bottom:-9%;border-radius:50% 70% 0 0;transform:rotate(-10deg);background:radial-gradient(ellipse at 62% 2%,#94c844 0%,#5aab2d 30%,#227638 80%);box-shadow:inset 0 3px 4px #dfed8c66}
     #veloxico-xp .vx-wallpaper:after{content:"";position:absolute;width:83%;height:40%;right:-24%;bottom:-10%;border-radius:80% 60% 0 0;transform:rotate(8deg);background:linear-gradient(164deg,#6da934,#427f2c 30%,#285820)}
@@ -94,13 +93,12 @@
     #veloxico-xp .vx-off{position:absolute;inset:0;z-index:2000;background:radial-gradient(ellipse at 50% 40%,#2a3439,#101718 80%);display:flex;align-items:center;justify-content:center;color:#9fc4c0;font:13px monospace;letter-spacing:2px}
     #veloxico-xp.vx-offline .vx-led{background:#b29c48;box-shadow:none}
     #veloxico-xp.vx-flat .vx-monitor{padding:0;border:0;background:none;box-shadow:0 7px 19px #0003;border-radius:9px}#veloxico-xp.vx-flat .vx-chin,#veloxico-xp.vx-flat .vx-top-model{display:none}#veloxico-xp.vx-flat .vx-glass{padding:0;border-radius:9px;box-shadow:none}
-    @container(max-width:560px){#veloxico-xp .vx-monitor{padding:15px 12px 50px;border-radius:18px}#veloxico-xp .vx-top-model{display:none}#veloxico-xp .vx-glass{padding:4px}#veloxico-xp .vx-screen{height:635px}#veloxico-xp .vx-icon{width:70px;min-height:72px;font-size:11px}#veloxico-xp .vx-chin{left:24px;right:22px;bottom:13px}#veloxico-xp .vx-logo{font-size:11px;letter-spacing:2px}#veloxico-xp .vx-model,#veloxico-xp .vx-vents{display:none}#veloxico-xp .vx-window{max-width:calc(100% - 12px)}#veloxico-xp .vx-welcome{padding:20px 18px}#veloxico-xp .vx-welcome h2{font-size:23px}#veloxico-xp .vx-files{grid-template-columns:1fr}#veloxico-xp .vx-side{display:none}#veloxico-xp .vx-file-list{padding:13px}#veloxico-xp .vx-game-body{padding:12px 8px}#veloxico-xp .vx-circuit{padding:12px 4px;grid-template-columns:1fr 150px 1fr;gap:3px}#veloxico-xp .vx-pipes{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px)}#veloxico-xp .vx-pipe{width:50px;height:50px}#veloxico-xp .vx-endpoint{font-size:11px}#veloxico-xp .vx-endpoint svg{width:22px;height:22px}#veloxico-xp .vx-game-top{font-size:11px}#veloxico-xp .vx-game-foot{align-items:start;flex-direction:column;gap:8px}#veloxico-xp .vx-product{padding:21px 17px}#veloxico-xp .vx-start{min-width:77px;font-size:16px;padding:4px 9px}#veloxico-xp .vx-tray{padding:0 8px}#veloxico-xp .vx-tray svg{display:none}#veloxico-xp .vx-controls{gap:4px}#veloxico-xp .vx-controls button{width:25px;height:25px}#veloxico-xp .vx-watermark{font-size:12px;bottom:63px}}
+    @container(max-width:560px){#veloxico-xp .vx-monitor{padding:15px 12px 50px;border-radius:18px}#veloxico-xp .vx-top-model{display:none}#veloxico-xp .vx-glass{padding:4px}#veloxico-xp .vx-icon{width:70px;min-height:72px;font-size:11px}#veloxico-xp .vx-chin{left:24px;right:22px;bottom:13px}#veloxico-xp .vx-logo{font-size:11px;letter-spacing:2px}#veloxico-xp .vx-model,#veloxico-xp .vx-vents{display:none}#veloxico-xp .vx-window{max-width:calc(100% - 12px)}#veloxico-xp .vx-welcome{padding:20px 18px}#veloxico-xp .vx-welcome h2{font-size:23px}#veloxico-xp .vx-files{grid-template-columns:1fr}#veloxico-xp .vx-side{display:none}#veloxico-xp .vx-file-list{padding:13px}#veloxico-xp .vx-game-body{padding:12px 8px}#veloxico-xp .vx-circuit{padding:12px 4px;grid-template-columns:1fr 150px 1fr;gap:3px}#veloxico-xp .vx-pipes{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(3,50px)}#veloxico-xp .vx-pipe{width:50px;height:50px}#veloxico-xp .vx-endpoint{font-size:11px}#veloxico-xp .vx-endpoint svg{width:22px;height:22px}#veloxico-xp .vx-game-top{font-size:11px}#veloxico-xp .vx-game-foot{align-items:start;flex-direction:column;gap:8px}#veloxico-xp .vx-product{padding:21px 17px}#veloxico-xp .vx-start{min-width:77px;font-size:16px;padding:4px 9px}#veloxico-xp .vx-tray{padding:0 8px}#veloxico-xp .vx-tray svg{display:none}#veloxico-xp .vx-controls{gap:4px}#veloxico-xp .vx-controls button{width:25px;height:25px}#veloxico-xp .vx-watermark{font-size:12px;bottom:63px}}
     @container(max-width:400px){#veloxico-xp .vx-circuit{grid-template-columns:1fr 132px 1fr}#veloxico-xp .vx-pipes{grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px)}#veloxico-xp .vx-pipe{width:44px;height:44px}}
     @media(pointer:coarse){#veloxico-xp .vx-controls{gap:6px}#veloxico-xp .vx-controls button{width:38px;height:44px}#veloxico-xp .vx-native{min-height:44px}#veloxico-xp .vx-taskbar{min-height:44px}#veloxico-xp .vx-desktop{bottom:44px}#veloxico-xp .vx-startmenu{bottom:44px}#veloxico-xp .vx-power{width:44px;height:29px}}
     @media(prefers-reduced-motion:reduce){#veloxico-xp *{transition:none!important}}
       /* Luna shell and classic applications */
     #veloxico-xp{--vx-luna:#0058e8;--vx-desktop-blue:#245edb}
-    #veloxico-xp .vx-screen{min-height:540px}
     #veloxico-xp .vx-wallpaper{background:radial-gradient(ellipse at 79% 18%,#bceaff55,transparent 40%),linear-gradient(#1a56b6,#459ce2 53%,#a5d8f0 76%,#4c9738 77%)}
     #veloxico-xp .vx-wallpaper:before{width:150%;height:63%;left:-37%;bottom:-20%;border-radius:45% 65% 0 0;transform:rotate(-9deg);background:radial-gradient(ellipse at 48% 0%,#9ece4f 0%,#5ba52f 27%,#297824 72%);box-shadow:inset 0 2px 2px #d3e99388}
     #veloxico-xp .vx-wallpaper:after{width:112%;height:32%;right:-46%;bottom:-6%;border-radius:80% 60% 0 0;transform:rotate(7deg);background:linear-gradient(165deg,#80aa3f,#3e712a 65%);opacity:.67}
@@ -133,7 +131,8 @@
     #veloxico-xp .vx-window:not(.vx-front){border-color:#688fce}
     #veloxico-xp .vx-controls button{box-shadow:inset 1px 1px 2px #fff8,inset -1px -1px 1px #143695}
     #veloxico-xp .vx-controls .vx-close{box-shadow:inset 1px 1px 2px #fff8,inset -1px -1px 1px #8b2117}
-    #veloxico-xp .vx-window-body{display:flex;flex-direction:column;flex:1;min-height:0;background:#ece9d8}
+    #veloxico-xp .vx-window-body{display:flex;flex-direction:column;flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;background:#ece9d8}
+    #veloxico-xp .vx-window-body>*{flex-shrink:0}
     #veloxico-xp .vx-window-body>.vx-status:last-child{margin-top:auto}
     #veloxico-xp .vx-menurow{flex-wrap:wrap;gap:4px 12px;padding:3px 8px;color:#1b1b1b;min-height:23px}
     #veloxico-xp .vx-title{font-weight:500}
@@ -262,7 +261,6 @@
     #veloxico-xp.vx-classic .vx-tray{background:#c0c0c0;box-shadow:none;border:2px inset #eee;color:#333}
     #veloxico-xp.vx-classic .vx-clock{color:#222}
     @container(max-width:560px){
-      #veloxico-xp .vx-screen{height:695px;min-height:0}
       #veloxico-xp .vx-startmenu{width:300px}#veloxico-xp .vx-startcolumns{grid-template-columns:1fr 116px}
       #veloxico-xp .vx-startitems button{padding:6px 3px;min-height:43px;font-size:11px}
       #veloxico-xp .vx-startitems button svg{width:21px;height:21px}#veloxico-xp .vx-startitems small{display:none}
@@ -291,6 +289,17 @@
     #veloxico-xp .vx-support-item input{min-width:0;width:100%;box-sizing:border-box;padding:6px;border:1px solid #9caaa8;background:#fff;color:#253537;font:11px Consolas,monospace}
     #veloxico-xp .vx-support-item button{padding:4px 9px;font-size:11px}
     #veloxico-xp .vx-support-status{font-size:11px;color:#285e38;min-height:18px}
+
+    /* Keep application controls reachable in short and rotated viewports. */
+    #veloxico-xp .vx-startmenu{display:flex;flex-direction:column;max-height:calc(100% - var(--vx-taskbar-height) - 8px)}
+    #veloxico-xp .vx-startcolumns{min-height:0;overflow:auto;overscroll-behavior:contain}
+    #veloxico-xp .vx-user,#veloxico-xp .vx-startbottom{flex-shrink:0}
+    #veloxico-xp .vx-context{max-height:calc(100% - var(--vx-taskbar-height) - 8px);overflow:auto}
+    #veloxico-xp .vx-blue-screen{overflow:auto;justify-content:flex-start;overscroll-behavior:contain}
+    #veloxico-xp .vx-blue-screen>*{flex-shrink:0}
+    #veloxico-xp .vx-snake-app,#veloxico-xp .vx-game-body{width:100%;max-width:640px;align-self:center}
+    #veloxico-xp .vx-memory-app{width:100%;max-width:420px;align-self:center}
+    @media(pointer:coarse){#veloxico-xp{--vx-taskbar-height:44px}}
 
   </style>
   <div class="vx-monitor">
@@ -412,7 +421,7 @@
     if (focused !== key) windows.get(focused)?.lifecycle?.pause?.();
     focused = key;
     windows.forEach((w, k) => w.classList.toggle('vx-front', k === key));
-    const win = windows.get(key); if (win) win.style.zIndex = ++z;
+    const win = windows.get(key); if (win) { clampPosition(win); win.style.zIndex = ++z; }
     taskRender();
   }
   function focusNext() {
@@ -422,14 +431,18 @@
   function minimize(key) { const win = windows.get(key); win.lifecycle?.pause?.(); win.hidden = true; if (focused === key) focusNext(); else taskRender(); }
   function closeWin(key) { const win = windows.get(key); if (!win) return; win.lifecycle?.destroy?.(); win.remove(); windows.delete(key); if (focused === key) focusNext(); else taskRender(); }
   function clampPosition(el) {
+    // Hidden windows have no measurable size; clamp them when restored instead.
+    if (el.hidden) return;
     const maxX = Math.max(0, desktop.clientWidth - el.offsetWidth), maxY = Math.max(0, desktop.clientHeight - el.offsetHeight);
     el.style.left = Math.max(0, Math.min(maxX, parseFloat(el.style.left) || 0)) + 'px';
     el.style.top = Math.max(0, Math.min(maxY, parseFloat(el.style.top) || 0)) + 'px';
   }
   function positionWindow(win, index = 0) {
     const small = desktop.clientWidth < 520;
+    const { height, columns } = iconLayout();
+    const iconRows = Math.ceil(desktop.querySelectorAll('.vx-icon').length / Math.min(3, columns));
     win.style.left = (small ? 6 : Math.min(151 + (index % 4) * 25, desktop.clientWidth - win.offsetWidth - 14)) + 'px';
-    win.style.top = (small ? 154 : 47 + (index % 4) * 25) + 'px'; clampPosition(win);
+    win.style.top = (small ? 16 + iconRows * (height + 8) : 47 + (index % 4) * 25) + 'px'; clampPosition(win);
   }
   function maximize(key) {
     const win = windows.get(key), button = win.querySelector('[data-control="max"]');
@@ -475,17 +488,32 @@
       });
     } else handle.addEventListener('dblclick', e => { if (!e.target.closest('button')) maximize(el.dataset.window); });
   }
+  function iconLayout() {
+    const first = desktop.querySelector('.vx-icon');
+    const small = desktop.clientWidth < 520;
+    const width = first?.offsetWidth || 88, height = Math.max(72, first?.offsetHeight || 0);
+    const columns = Math.max(1, Math.floor((desktop.clientWidth - 16) / (width + 4)));
+    const rows = Math.max(1, Math.floor((desktop.clientHeight - 16) / (height + 8)));
+    return { small, width, height, columns, rows };
+  }
   function arrangeIcons() {
-    const small = desktop.clientWidth < 520, rows = Math.max(1, Math.floor((desktop.clientHeight - 25) / 80));
+    const { small, width, height, columns, rows } = iconLayout();
+    const rowColumns = Math.min(3, columns);
     desktop.querySelectorAll('.vx-icon').forEach((el, i) => {
-      el.style.left = (small ? 8 + (i % 3) * Math.min(83, (desktop.clientWidth - 24) / 3) : 15 + Math.floor(i / rows) * 88) + 'px';
-      el.style.top = (small ? 7 + Math.floor(i / 3) * 72 : 13 + (i % rows) * 80) + 'px';
+      el.style.left = (small ? 8 + (i % rowColumns) * (width + 4) : 8 + Math.floor(i / rows) * (width + 4)) + 'px';
+      el.style.top = (8 + (small ? Math.floor(i / rowColumns) : i % rows) * (height + 8)) + 'px';
+      clampPosition(el);
     });
   }
   function layout() {
-    if (desktop.clientWidth < 200 || desktop.clientHeight < 300) return;
-    const mode = desktop.clientWidth < 520 ? 'small' : 'large';
-    if (mode !== layoutMode) { layoutMode = mode; arrangeIcons(); windows.forEach(w => { if (w.dataset.max !== 'true') positionWindow(w); }); }
+    if (desktop.clientWidth < 200 || desktop.clientHeight < 120) return;
+    const { small, columns, rows } = iconLayout();
+    const mode = small ? 'small:' + Math.min(3, columns) : 'large:' + rows;
+    if (mode !== layoutMode) {
+      const firstLayout = !layoutMode;
+      layoutMode = mode; arrangeIcons();
+      if (firstLayout) windows.forEach(w => { if (w.dataset.max !== 'true') positionWindow(w); });
+    }
     else desktop.querySelectorAll('.vx-icon').forEach(clampPosition);
     windows.forEach(w => { if (w.dataset.max !== 'true') clampPosition(w); });
   }
